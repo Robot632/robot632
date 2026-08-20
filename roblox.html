@@ -45,57 +45,66 @@
     gap: 30px;
   }
 
+  .title-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
   .bot-icon-link{
     display:inline-block;
     text-decoration:none;
     cursor:pointer;
     transition: transform 0.12s ease, filter 0.12s ease;
+    flex-shrink: 0;
   }
   .bot-icon-link:hover{ transform: translateY(-2px); }
   .bot-icon-link:hover .bot-icon{ filter: drop-shadow(0 10px 12px rgba(0,0,0,0.35)); }
 
   .bot-icon{
-    width: 96px;
-    height: 96px;
+    width: 108px;
+    height: 108px;
     position: relative;
     filter: drop-shadow(0 8px 10px rgba(0,0,0,0.28));
   }
   .bot-icon .antenna{
-    position:absolute; top:-14px; left:41%; width:4px; height:14px;
+    position:absolute; top:-16px; left:41%; width:5px; height:16px;
     border-radius: 2px;
     background: linear-gradient(90deg, var(--icon-dark), var(--icon-front) 45%, var(--icon-side));
   }
   .bot-icon .antenna::after{
-    content:''; position:absolute; top:-9px; left:50%; transform: translateX(-50%);
-    width:9px; height:9px; border-radius:50%;
+    content:''; position:absolute; top:-10px; left:50%; transform: translateX(-50%);
+    width:10px; height:10px; border-radius:50%;
     background: radial-gradient(circle at 32% 28%, #ffffff, var(--icon-front) 35%, var(--icon-side) 75%, var(--icon-dark) 100%);
     box-shadow: inset -1px -2px 3px rgba(0,0,0,0.35);
   }
   .bot-icon .side{
-    position:absolute; top:5px; right:1px; width: 46%; height: 84%; border-radius: 11px;
+    position:absolute; top:6px; right:1px; width: 46%; height: 84%; border-radius: 12px;
     background: linear-gradient(120deg, var(--icon-side) 0%, var(--icon-dark) 55%, #383d44 100%);
     box-shadow: inset 2px 0 4px rgba(0,0,0,0.35), inset -3px -3px 6px rgba(0,0,0,0.4);
   }
   .bot-icon .face{
-    position:absolute; left:0; top:0; width: 66%; height: 96%; border-radius: 14px;
+    position:absolute; left:0; top:0; width: 66%; height: 96%; border-radius: 16px;
     background: linear-gradient(155deg, #f2f3f5 0%, var(--icon-front) 40%, #c3c8ce 80%, var(--icon-side) 100%);
     box-shadow: inset 0 2px 3px rgba(255,255,255,0.85), inset 0 -7px 10px rgba(0,0,0,0.18);
     display:flex; align-items:center; justify-content:center;
   }
   .bot-icon .visor{
-    position:absolute; width: 76%; height: 34%; border-radius: 8px;
+    position:absolute; width: 76%; height: 34%; border-radius: 9px;
     background: linear-gradient(180deg, #2c2f34, #45494f 60%, #575c63);
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
-    display:flex; align-items:center; justify-content:center; gap: 8px;
+    display:flex; align-items:center; justify-content:center; gap: 9px;
   }
   .bot-icon .eye{
-    width:9px; height:9px; border-radius:50%;
+    width:10px; height:10px; border-radius:50%;
     background: radial-gradient(circle at 35% 30%, #ffffff, var(--icon-front) 45%, var(--icon-side) 85%);
     box-shadow: 0 0 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.3);
   }
 
   h1.title{
-    font-size: clamp(30px, 8vw, 42px);
+    font-size: clamp(28px, 7vw, 40px);
     line-height: 1;
     margin: 0;
     color: var(--text);
@@ -205,22 +214,24 @@
 
   <main class="page">
 
-    <a class="bot-icon-link" href="index.html" aria-label="Back to Robot632 home">
-      <div class="bot-icon">
-        <div class="antenna"></div>
-        <div class="side"></div>
-        <div class="face">
-          <div class="visor">
-            <span class="eye"></span>
-            <span class="eye"></span>
+    <div class="title-row">
+      <a class="bot-icon-link" href="index.html" aria-label="Back to Robot632 home">
+        <div class="bot-icon">
+          <div class="antenna"></div>
+          <div class="side"></div>
+          <div class="face">
+            <div class="visor">
+              <span class="eye"></span>
+              <span class="eye"></span>
+            </div>
           </div>
         </div>
-      </div>
-    </a>
+      </a>
 
-    <h1 class="title">
-      <span>R</span><span>o</span><span>b</span><span>l</span><span>o</span><span>x</span>
-    </h1>
+      <h1 class="title">
+        <span>R</span><span>o</span><span>b</span><span>l</span><span>o</span><span>x</span>
+      </h1>
+    </div>
     <p class="subtitle">games i've built and the group behind some of them, with live stats pulled straight from Roblox</p>
 
     <div class="section">
