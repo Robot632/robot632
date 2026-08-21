@@ -126,6 +126,13 @@
   .bolt.bl{ bottom:16px; left:18px; }
   .bolt.br{ bottom:16px; right:18px; }
 
+  /* the bl bolt doubles as a hidden button into the terminal -- looks
+     and behaves exactly like the other rivets, no hover/focus tell */
+  a.bolt.bl{
+    display:block;
+    cursor:pointer;
+  }
+
   .socials{
     position:absolute;
     top: clamp(14px, 3vh, 18px);
@@ -358,7 +365,7 @@
   <main class="panel">
     <span class="bolt tl"></span>
     <span class="bolt tr"></span>
-    <span class="bolt bl"></span>
+    <a class="bolt bl" href="terminal.html" aria-label="Open terminal" title="Open terminal"></a>
     <span class="bolt br"></span>
 
     <div class="socials" id="socials"></div>
