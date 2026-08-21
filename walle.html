@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot632 // Signal Sequence</title>
+<script>
+  (function(){
+    var saved = localStorage.getItem('robot632_theme');
+    var preferred = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.documentElement.dataset.theme = preferred;
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Space+Mono:wght@400;700&family=Caveat:wght@700&family=Bangers&family=Permanent+Marker&family=Kalam:wght@700&family=Chewy&family=Rubik:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #3f7288;
+    --bg-deep: #234a5c;
+    --text: #ffffff;
+    --text-shadow: rgba(0,0,0,0.18);
+    --panel-metal-hi: #eef2f5;
+    --panel-metal-mid: #b7c3cd;
+    --panel-metal-lo: #7e8d99;
+    --panel-border: rgba(20,30,38,0.35);
+    --tagline-bg: rgba(0,0,0,0.16);
+    --tagline-border: rgba(255,255,255,0.18);
+    --grid-line: rgba(255,255,255,0.06);
+    --screen-bg-1: #16323e;
+    --screen-bg-2: #0a1c24;
+    --screen-line: rgba(180,205,215,0.35);
+    --accent-cyan: #4be9ff;
+    --accent-red: #ff4a3d;
+    --pip-off: #4d6a8d;
+    --vent-ring: #d7dee2;
+  }
+  html[data-theme="light"]{
+    --bg: #cfe8ee;
+    --bg-deep: #f2f8fa;
+    --text: #0c2b33;
+    --text-shadow: rgba(0,0,0,0.08);
+    --tagline-bg: rgba(255,255,255,0.6);
+    --tagline-border: rgba(0,60,70,0.15);
+    --grid-line: rgba(0,60,70,0.08);
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    height:100vh;
+    height:100dvh;
+    width:100vw;
+    overflow:hidden;
+    background: radial-gradient(circle at 50% -10%, var(--bg-deep), var(--bg) 60%);
+    color: var(--text);
+    font-family:'Nunito', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:14px;
+  }
+  body::before{
+    content:'';
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size:34px 34px;
+  }
+
+  .panel{
+    position:relative;
+    width:100%;
+    max-width:460px;
+    height:100%;
+    max-height:720px;
+    background: var(--tagline-bg);
+    border:2px solid var(--tagline-border);
+    border-radius:24px;
+    padding: clamp(20px,4.5vh,30px) clamp(18px,6vw,28px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap: clamp(10px,2vh,14px);
+    overflow:hidden;
+    box-shadow:0 30px 60px rgba(0,0,0,0.25);
+  }
+
+  .home-link{
+    position:absolute;
+    top:14px;
+    right:16px;
+    color: var(--text);
+    opacity:0.75;
+    text-decoration:none;
+    font-family:'Space Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    border:1px solid var(--tagline-border);
+    border-radius:6px;
+    padding:4px 9px;
+    text-transform:uppercase;
+    transition: opacity 0.15s ease;
+    z-index:3;
+  }
+  .home-link:hover{ opacity:1; }
+
+  /* ---------- device: the panel WALL-E holds up to ---------- */
+  .device{
+    position:relative;
+    width:100%;
+    max-width:340px;
+    background: linear-gradient(155deg, var(--panel-metal-hi) 0%, var(--panel-metal-mid) 55%, var(--panel-metal-lo) 100%);
+    border-radius:18px;
+    border:1px solid var(--panel-border);
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    box-shadow:
+      inset 0 2px 3px rgba(255,255,255,0.7),
+      inset 0 -10px 16px rgba(0,0,0,0.15),
+      0 14px 26px rgba(0,0,0,0.3);
+    flex-shrink:0;
+  }
+
+  .screen{
+    position:relative;
+    width:100%;
+    aspect-ratio: 5.4 / 2;
+    border-radius:10px;
+    background:
+      repeating-linear-gradient(180deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 6px),
+      linear-gradient(160deg, var(--screen-bg-1), var(--screen-bg-2));
+    border:1px solid rgba(0,0,0,0.4);
+    box-shadow: inset 0 3px 8px rgba(0,0,0,0.6);
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .screen svg{ width:78%; height:78%; overflow:visible; }
+  .screen{ transition: background 0.25s ease, box-shadow 0.25s ease; }
+  .screen.victory{
+    background:
+      repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 6px),
+      linear-gradient(160deg, color-mix(in srgb, var(--accent-cyan) 55%, var(--screen-bg-1)), color-mix(in srgb, var(--accent-cyan) 30%, var(--screen-bg-2)));
+    box-shadow: inset 0 3px 8px rgba(0,0,0,0.6), 0 0 18px 2px color-mix(in srgb, var(--accent-cyan) 60%, transparent);
+  }
+  .scan-ring{ fill:none; stroke:var(--screen-line); stroke-width:1.4; }
+  .scan-tick{ stroke:var(--screen-line); stroke-width:2; }
+  .scan-dish{ fill:var(--screen-line); }
+  .scan-core{ fill:#eef2f5; }
+  #scanPupil{ fill:var(--accent-red); transition: fill 0.15s ease; transform-box:fill-box; transform-origin:center; }
+  .scan-ring.spin{ transform-origin:60px 35px; animation: spin 9s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  #scanPupil.talking{ animation: pulse 0.35s ease; }
+  @keyframes pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.35); } }
+
+  .board-row{
+    display:flex;
+    align-items:stretch;
+    gap:8px;
+  }
+
+  .board{
+    flex:1;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap:8px;
+    aspect-ratio:1/1;
+  }
+
+  .pad{
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--pad-color) 65%, white) 0%,
+      var(--pad-color) 50%,
+      color-mix(in srgb, var(--pad-color) 78%, black) 100%);
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,0.35),
+      inset 0 -4px 7px rgba(0,0,0,0.3),
+      0 3px 6px rgba(0,0,0,0.25);
+    opacity:0.62;
+    transition: transform 0.08s ease, opacity 0.12s ease, box-shadow 0.08s ease;
+  }
+  .pad:disabled{ cursor:default; }
+  .pad.lit{
+    opacity:1;
+    transform: scale(0.96);
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,0.55),
+      inset 0 -4px 7px rgba(0,0,0,0.22),
+      0 0 20px 3px var(--pad-color);
+  }
+  .pad:not(:disabled):hover{ opacity:0.85; }
+  .pad.victory{
+    opacity:1;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--accent-cyan) 65%, white) 0%,
+      var(--accent-cyan) 50%,
+      color-mix(in srgb, var(--accent-cyan) 78%, black) 100%);
+    box-shadow: 0 0 22px 4px var(--accent-cyan);
+    transition: background 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+  }
+
+  .side-rail{
+    width:16px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .pip{
+    flex:1;
+    border-radius:5px;
+    background: color-mix(in srgb, var(--pip-off) 35%, transparent);
+    border:1px solid rgba(0,0,0,0.25);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+  }
+  .pip.lit{
+    background: var(--accent-cyan);
+    box-shadow: 0 0 10px 1px var(--accent-cyan), inset 0 1px 2px rgba(255,255,255,0.4);
+  }
+
+  .vent-wrap{
+    --vent-color: var(--accent-red);
+    position:absolute;
+    right:-30px;
+    top:50%;
+    transform:translateY(-50%);
+    width:26px;
+    height:54px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+    transition: filter 0.25s ease;
+  }
+  .vent-wrap.victory{
+    --vent-color: var(--accent-cyan);
+    filter: drop-shadow(0 2px 10px var(--accent-cyan));
+  }
+  .vent-svg{ width:100%; height:100%; display:block; overflow:visible; }
+  .vent-dome{ fill:#000000; }
+  .vent-spoke{
+    stroke: var(--vent-color);
+    stroke-width:1.6;
+    stroke-linecap:round;
+    opacity:1;
+    transition: opacity 0.35s ease, stroke 0.25s ease;
+  }
+  .vent-spoke.gone{ opacity:0; }
+
+  .wordmark{
+    font-size: clamp(18px,4.6vw,24px);
+    line-height:1;
+    margin:0;
+    color: var(--text);
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  .wordmark span{
+    display:inline-block;
+    cursor:pointer;
+    transition: transform 0.25s ease;
+    text-shadow:0 2px 6px var(--text-shadow);
+  }
+  .wordmark span:active{ transform: scale(0.85) !important; }
+
+  .tagline{
+    font-weight:800;
+    font-size:12px;
+    text-align:center;
+    opacity:0.9;
+    max-width:380px;
+    line-height:1.45;
+    margin:0;
+    padding:7px 13px;
+    border-radius:12px;
+    background: var(--tagline-bg);
+    border:1px solid var(--tagline-border);
+  }
+
+  .stats{
+    display:flex;
+    gap:10px;
+    font-family:'Space Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.04em;
+  }
+  .stat{
+    background: var(--tagline-bg);
+    border:1px solid var(--tagline-border);
+    border-radius:10px;
+    padding:5px 12px;
+    text-transform:uppercase;
+  }
+  .stat b{ font-size:14px; display:block; margin-top:2px; letter-spacing:0; }
+
+  .level-restart-btn{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    width:30px;
+    height:30px;
+    border:none;
+    border-radius:50%;
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+    color:#fff;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--bg-deep) 75%, white) 0%,
+      var(--bg-deep) 45%,
+      color-mix(in srgb, var(--bg-deep) 80%, black) 100%);
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,0.4),
+      inset 0 -3px 6px rgba(0,0,0,0.28),
+      0 4px 8px rgba(0,0,0,0.25);
+    transition: transform 0.1s ease;
+  }
+  .level-restart-btn.show{ display:flex; }
+  .level-restart-btn:hover{ transform: translateY(-2px); }
+  .level-restart-btn:active{ transform: translateY(1px); }
+
+  .status{
+    font-family:'Space Mono', monospace;
+    font-size:13px;
+    min-height:18px;
+    text-align:center;
+    opacity:0.9;
+  }
+  .status.err{ color:#ffb3b3; }
+  .status.victory{ color: var(--accent-cyan); text-shadow:0 0 8px color-mix(in srgb, var(--accent-cyan) 60%, transparent); }
+  .stat.victory{ border-color: var(--accent-cyan); box-shadow:0 0 8px color-mix(in srgb, var(--accent-cyan) 50%, transparent); transition: border-color 0.25s ease, box-shadow 0.25s ease; }
+  #scannerSvg{ transition: opacity 0.25s ease; }
+  #scannerSvg.gone{ opacity:0; }
+
+  .start-btn{
+    border:none;
+    border-radius:14px;
+    padding:9px 24px;
+    font-family:'Nunito', sans-serif;
+    font-weight:800;
+    font-size:14px;
+    color:#fff;
+    letter-spacing:0.02em;
+    cursor:pointer;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--bg-deep) 75%, white) 0%,
+      var(--bg-deep) 45%,
+      color-mix(in srgb, var(--bg-deep) 80%, black) 100%);
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,0.4),
+      inset 0 -4px 8px rgba(0,0,0,0.28),
+      0 6px 12px rgba(0,0,0,0.25);
+    transition: transform 0.1s ease;
+  }
+  .start-btn:hover{ transform: translateY(-2px); }
+  .start-btn:active{ transform: translateY(1px); }
+</style>
+</head>
+<body>
+
+  <main class="panel">
+    <a class="home-link" href="index.html">&larr; home</a>
+
+    <h1 class="wordmark" id="wordmark">
+      <span>S</span><span>I</span><span>G</span><span>N</span><span>A</span><span>L</span><span>&nbsp;</span><span>S</span><span>E</span><span>Q</span><span>U</span><span>E</span><span>N</span><span>C</span><span>E</span>
+    </h1>
+
+    <div class="device">
+      <div class="screen">
+        <svg viewBox="0 0 120 70" id="scannerSvg">
+          <circle class="scan-ring spin" cx="60" cy="35" r="24"/>
+          <circle class="scan-ring" cx="60" cy="35" r="24" stroke-dasharray="3 5" opacity="0.5"/>
+          <line class="scan-tick" x1="20" y1="18" x2="33" y2="26"/>
+          <line class="scan-tick" x1="100" y1="18" x2="87" y2="26"/>
+          <circle class="scan-core" cx="60" cy="35" r="13"/>
+          <circle id="scanPupil" cx="60" cy="35" r="6"/>
+        </svg>
+      </div>
+
+      <div class="board-row">
+        <div class="board" id="board"></div>
+        <div class="side-rail" id="sideRail">
+          <span class="pip" data-pip="2"></span>
+          <span class="pip" data-pip="1"></span>
+          <span class="pip" data-pip="0"></span>
+        </div>
+      </div>
+
+      <span class="vent-wrap" id="ventWrap">
+        <svg class="vent-svg" id="ventSvg" viewBox="0 0 50 100" preserveAspectRatio="xMidYMid meet"></svg>
+      </span>
+    </div>
+
+    <p class="tagline">watch the pattern, repeat it back. every beep is synthesized live, nothing sampled. loosely inspired by a certain trash-compacting robot, no relation otherwise.</p>
+
+    <div class="stats">
+      <div class="stat">level<b id="levelVal">0</b></div>
+      <button class="level-restart-btn" id="levelRestartBtn" aria-label="Restart" title="Restart">&#8635;</button>
+    </div>
+
+    <p class="status" id="status">press start to begin</p>
+    <button class="start-btn" id="startBtn">start</button>
+  </main>
+
+<script>
+  // -----------------------------------------------------------
+  // Signal Sequence -- a Simon-says style memory game. Every pad
+  // sound is synthesized live with the Web Audio API (short
+  // oscillator sweeps), nothing is a recorded/sampled clip.
+  //
+  // To change a pad's sound/color: edit its entry in PADS below.
+  // To change difficulty ramp: edit SPEED_START / SPEED_FLOOR /
+  // SPEED_STEP near the game state section.
+  // -----------------------------------------------------------
+
+  let audioCtx;
+  function getCtx(){
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  // one short pitch-swept tone. freqStart/freqEnd in Hz, duration
+  // in seconds, delay = when to start relative to now (seconds).
+  function tone(freqStart, freqEnd, duration, delay, type, peak){
+    type = type || 'sine';
+    peak = peak || 0.22;
+    const c = getCtx();
+    const t0 = c.currentTime + delay;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(Math.max(freqStart, 1), t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd, 1), t0 + duration);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(peak, t0 + duration * 0.2);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain).connect(c.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+  }
+
+  const PADS = [
+    { id: 0, color: '#7d5aa6', play: () => tone(392, 392, 0.22, 0, 'sine', 0.22) },  // purple, top-left
+    { id: 1, color: '#a8ab48', play: () => tone(494, 494, 0.22, 0, 'sine', 0.22) },  // olive, top-right
+    { id: 2, color: '#a1433f', play: () => tone(587, 587, 0.22, 0, 'sine', 0.22) },  // maroon, bottom-left
+    { id: 3, color: '#3f8f96', play: () => tone(659, 659, 0.22, 0, 'sine', 0.22) }   // teal, bottom-right
+  ];
+
+  function failSound(){
+    tone(300, 90, 0.5, 0, 'sawtooth', 0.2);
+  }
+  function winRoundSound(){
+    tone(700, 900, 0.08, 0, 'sine', 0.18);
+    tone(900, 1300, 0.1, 0.09, 'sine', 0.18);
+  }
+  function tickSound(){
+    tone(950, 700, 0.09, 0, 'square', 0.12);
+  }
+
+  // -----------------------------------------------------------
+  // Game state
+  // -----------------------------------------------------------
+  const SPEED_START = 700;  // ms per step at level 1
+  const SPEED_FLOOR  = 280; // fastest it'll ever get
+  const SPEED_STEP   = 25;  // ms shaved off per level
+
+  const START_LENGTH = 3;   // sequence length at level 1
+  const MAX_LEVEL     = 3;  // level 1 -> 3 steps, level 2 -> 4, level 3 -> 5, then victory
+
+  const ROUND_TIME_MS = 8000; // player has 8s per round -- the vent doubles as the countdown
+
+  let sequence = [];
+  let playerIndex = 0;
+  let level = 0;
+  let accepting = false;
+
+  const board = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const levelVal = document.getElementById('levelVal');
+  const startBtn = document.getElementById('startBtn');
+  const levelRestartBtn = document.getElementById('levelRestartBtn');
+  const pupil = document.getElementById('scanPupil');
+  const scannerSvg = document.getElementById('scannerSvg');
+  const screenEl = document.querySelector('.screen');
+  const ventSvg = document.getElementById('ventSvg');
+  const ventWrap = document.getElementById('ventWrap');
+  const pipEls = Array.from(document.querySelectorAll('.pip'));
+  const statEls = Array.from(document.querySelectorAll('.stat'));
+
+  // -----------------------------------------------------------
+  // Vent: a half-circle of 16 radiating spokes glued to the
+  // outer edge of the device, flat side against the panel. It
+  // doubles as the round timer -- 2 spokes vanish (with a tick)
+  // every second, so all 16 are gone after the full 8s. The
+  // first and last spokes sit exactly 180deg apart (top and
+  // bottom of the flat edge).
+  // -----------------------------------------------------------
+  const SPOKE_COUNT = 28;
+  const NS = 'http://www.w3.org/2000/svg';
+  function buildVent(){
+    const dome = document.createElementNS(NS, 'path');
+    dome.setAttribute('d', 'M0,2 A48,48 0 0 1 0,98 Z');
+    dome.setAttribute('class', 'vent-dome');
+    ventSvg.appendChild(dome);
+
+    for (let i = 0; i < SPOKE_COUNT; i++){
+      const angle = (-90 + i * (180 / (SPOKE_COUNT - 1))) * Math.PI / 180;
+      const innerR = 6, outerR = 46;
+      const x1 = innerR * Math.cos(angle), y1 = 50 + innerR * Math.sin(angle);
+      const x2 = outerR * Math.cos(angle), y2 = 50 + outerR * Math.sin(angle);
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', x1.toFixed(2));
+      line.setAttribute('y1', y1.toFixed(2));
+      line.setAttribute('x2', x2.toFixed(2));
+      line.setAttribute('y2', y2.toFixed(2));
+      line.setAttribute('class', 'vent-spoke');
+      line.dataset.index = i;
+      ventSvg.appendChild(line);
+    }
+  }
+  buildVent();
+  const spokeEls = Array.from(ventSvg.querySelectorAll('.vent-spoke'));
+
+  function resetVent(){
+    spokeEls.forEach(s => s.classList.remove('gone'));
+  }
+
+  let roundTimer = null;
+
+  // removes 2 spokes every second (with a tick) until all are gone,
+  // then fires timeUp(). Call stopRoundTimer() to cancel early.
+  function startRoundTimer(timeUp){
+    resetVent();
+    let i = 0;
+    roundTimer = setInterval(() => {
+      if (i < spokeEls.length) spokeEls[i].classList.add('gone');
+      if (i + 1 < spokeEls.length) spokeEls[i + 1].classList.add('gone');
+      tickSound();
+      i += 2;
+      if (i >= spokeEls.length){
+        clearInterval(roundTimer);
+        roundTimer = null;
+        if (timeUp) timeUp();
+      }
+    }, ROUND_TIME_MS / (SPOKE_COUNT / 2));
+  }
+
+  function stopRoundTimer(){
+    if (roundTimer){
+      clearInterval(roundTimer);
+      roundTimer = null;
+    }
+  }
+
+  function renderBoard(){
+    board.innerHTML = PADS.map(p => `
+      <button class="pad" style="--pad-color:${p.color}" data-id="${p.id}" disabled></button>
+    `).join('');
+  }
+  renderBoard();
+  const padEls = Array.from(board.querySelectorAll('.pad'));
+
+  function setStatus(text, mode){
+    statusEl.textContent = text;
+    statusEl.classList.toggle('err', mode === 'err');
+    statusEl.classList.toggle('victory', mode === 'victory');
+  }
+
+  function speedForLevel(lvl){
+    return Math.max(SPEED_FLOOR, SPEED_START - (lvl - 1) * SPEED_STEP);
+  }
+
+  function litPad(id, ms){
+    const el = padEls[id];
+    el.classList.add('lit');
+    pupil.classList.add('talking');
+    setTimeout(() => {
+      el.classList.remove('lit');
+      pupil.classList.remove('talking');
+    }, ms);
+  }
+
+  // side-rail bars track the current LEVEL, not round progress:
+  // 1 bar lit at level 1, 2 bars at level 2, 3 bars at level 3.
+  function updatePips(count){
+    pipEls.forEach((pip, i) => {
+      pip.classList.toggle('lit', i >= (pipEls.length - count));
+    });
+  }
+
+  function resetVisuals(){
+    padEls.forEach(p => p.classList.remove('victory'));
+    resetVent();
+    ventWrap.classList.remove('victory');
+    scannerSvg.classList.remove('gone');
+    screenEl.classList.remove('victory');
+    statEls.forEach(s => s.classList.remove('victory'));
+    levelRestartBtn.classList.remove('show');
+    setStatus('press start to begin');
+  }
+
+  function startGame(){
+    clearTimeout(autoStartTimer);
+    stopRoundTimer();
+    sequence = [];
+    level = 0;
+    playerIndex = 0;
+    accepting = false;
+    startBtn.textContent = 'restart';
+    resetVisuals();
+    updatePips(0);
+    nextRound();
+  }
+
+  function nextRound(){
+    stopRoundTimer();
+    resetVent();
+    level++;
+    if (level > MAX_LEVEL){
+      triggerVictory();
+      return;
+    }
+    if (level === 1){
+      for (let i = 0; i < START_LENGTH; i++) sequence.push(Math.floor(Math.random() * PADS.length));
+    } else {
+      sequence.push(Math.floor(Math.random() * PADS.length));
+    }
+    playerIndex = 0;
+    levelVal.textContent = level;
+    setStatus('watch...');
+    updatePips(level);
+    padEls.forEach(p => p.disabled = true);
+    playSequence();
+  }
+
+  function playSequence(){
+    const step = speedForLevel(level);
+    sequence.forEach((padId, i) => {
+      setTimeout(() => {
+        PADS[padId].play();
+        litPad(padId, step * 0.6);
+      }, i * step);
+    });
+    setTimeout(() => {
+      accepting = true;
+      padEls.forEach(p => p.disabled = false);
+      setStatus('your turn');
+      startRoundTimer(() => handleFail("time's up"));
+    }, sequence.length * step + 150);
+  }
+
+  // fast win: everything flips to the cyan "won" state within
+  // 0.25s (the CSS transitions above are what do the work) and
+  // just stays there -- no long drawn-out sequence.
+  function triggerVictory(){
+    accepting = false;
+    stopRoundTimer();
+    padEls.forEach(p => p.disabled = true);
+    setStatus('you won!', 'victory');
+    updatePips(3);
+    scannerSvg.classList.add('gone');
+    screenEl.classList.add('victory');
+    ventWrap.classList.add('victory');
+    padEls.forEach(p => p.classList.add('victory'));
+    statEls.forEach(s => s.classList.add('victory'));
+    levelRestartBtn.classList.add('show');
+  }
+
+  function handleFail(reason){
+    accepting = false;
+    stopRoundTimer();
+    padEls.forEach(p => p.disabled = true);
+    failSound();
+    pupil.classList.add('talking');
+    setTimeout(() => pupil.classList.remove('talking'), 500);
+    setStatus(`${reason} -- reached level ${level}. press start to try again.`, 'err');
+    startBtn.textContent = 'start';
+    levelRestartBtn.classList.add('show');
+  }
+
+  function handlePad(id){
+    if (!accepting) return;
+    PADS[id].play();
+    litPad(id, 180);
+
+    if (id !== sequence[playerIndex]){
+      handleFail('missed it');
+      return;
+    }
+
+    playerIndex++;
+    if (playerIndex === sequence.length){
+      accepting = false;
+      stopRoundTimer();
+      padEls.forEach(p => p.disabled = true);
+      winRoundSound();
+      setTimeout(nextRound, 500);
+    }
+  }
+
+  board.addEventListener('click', (e) => {
+    const btn = e.target.closest('.pad');
+    if (!btn || btn.disabled) return;
+    handlePad(parseInt(btn.dataset.id, 10));
+  });
+
+  startBtn.addEventListener('click', startGame);
+  levelRestartBtn.addEventListener('click', startGame);
+
+  // auto-start 5s after the page loads if nobody has hit start yet
+  let autoStartTimer = setTimeout(startGame, 5000);
+</script>
+
+<script>
+  // -----------------------------------------------------------
+  // Title: same letter-cascade treatment as the home page --
+  // a shared "font position" advances every cycle and the whole
+  // title updates letter-by-letter in a quick cascade. Clicking
+  // a letter bumps that letter permanently one font ahead.
+  // -----------------------------------------------------------
+  const FONTS = [
+    { family: "'Nunito', sans-serif",        weight: 800, tilt: 0  },
+    { family: "'Caveat', cursive",           weight: 700, tilt: -4 },
+    { family: "'Bangers', cursive",          weight: 400, tilt: 3  },
+    { family: "'Permanent Marker', cursive", weight: 400, tilt: -2 },
+    { family: "'Kalam', cursive",            weight: 700, tilt: 5  },
+    { family: "'Chewy', cursive",            weight: 400, tilt: -3 },
+    { family: "'Rubik', sans-serif",         weight: 700, tilt: 2  }
+  ];
+
+  const titleLetters = Array.from(document.querySelectorAll('.wordmark span'));
+  const titleOffsets = titleLetters.map(() => 0);
+  let titleFontIndex = 0;
+
+  function applyTitleFont(letter, i){
+    const font = FONTS[(titleFontIndex + titleOffsets[i]) % FONTS.length];
+    letter.style.fontFamily = font.family;
+    letter.style.fontWeight = font.weight;
+    letter.style.transform = `rotate(${font.tilt}deg)`;
+  }
+
+  function cascadeTitleFonts(){
+    titleFontIndex = (titleFontIndex + 1) % FONTS.length;
+    let i = 0;
+    function nextLetter(){
+      if (i < titleLetters.length){
+        applyTitleFont(titleLetters[i], i);
+        i++;
+        setTimeout(nextLetter, 40);
+      } else {
+        setTimeout(cascadeTitleFonts, 2000);
+      }
+    }
+    nextLetter();
+  }
+
+  function bounceTitleLetter(letter){
+    letter.animate(
+      [
+        { transform: `${letter.style.transform} scale(1)`, offset: 0 },
+        { transform: `${letter.style.transform} scale(0.75)`, offset: 0.08 },
+        { transform: `${letter.style.transform} scale(1)`, offset: 1 }
+      ],
+      { duration: 500, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'none' }
+    );
+  }
+
+  titleLetters.forEach((letter, i) => {
+    letter.addEventListener('click', () => {
+      titleOffsets[i] = (titleOffsets[i] + 1) % FONTS.length;
+      applyTitleFont(letter, i);
+      bounceTitleLetter(letter);
+    });
+  });
+
+  document.fonts.ready.then(() => {
+    titleLetters.forEach((letter, i) => applyTitleFont(letter, i));
+    cascadeTitleFonts();
+  });
+</script>
+
+</body>
+</html>
