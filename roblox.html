@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Robot632 · Roblox</title>
+<script>
+  // Runs before paint so the page never flashes the wrong theme
+  // when navigating here from index.html (shared localStorage key).
+  (function(){
+    var saved = localStorage.getItem('robot632_theme');
+    var preferred = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.documentElement.dataset.theme = preferred;
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Nunito:wght@700;800&family=Bangers&family=Permanent+Marker&family=Kalam:wght@700&family=Chewy&family=Rubik:wght@700;800&display=swap" rel="stylesheet">
@@ -21,6 +30,25 @@
     --green: #2fb84f;
     --roblox-red: #e2242b;
     --card-bg: #f4f2ee;
+    --social-color: rgba(255,255,255,0.85);
+    --grid-line: rgba(255,255,255,0.06);
+
+    /* page padding -- edit these to nudge everything up/down or side-to-side */
+    --page-padding-top: 65px;
+    --page-padding-x: 20px;
+    --page-padding-bottom: 70px;
+    --title-subtitle-gap: 14px;
+  }
+
+  /* Light theme -- toggled by adding data-theme="light" to <html>.
+     Shared localStorage key with index.html, so the choice made on
+     either page carries over to the other. */
+  html[data-theme="light"]{
+    --bg: #eafaf6;
+    --text: #08403f;
+    --text-shadow: rgba(0,0,0,0.08);
+    --social-color: rgba(8,64,63,0.75);
+    --grid-line: rgba(0,90,90,0.10);
   }
 
   *{ box-sizing: border-box; }
@@ -33,7 +61,24 @@
     font-family: 'Nunito', sans-serif;
     display:flex;
     justify-content:center;
-    padding: 50px 20px 70px;
+    padding: var(--page-padding-top) var(--page-padding-x) var(--page-padding-bottom);
+    position: relative;
+  }
+
+  /* faint HUD scanline grid behind everything, matching index.html */
+  body::before{
+    content:'';
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 34px 34px;
+    transition: background-image 0.25s ease;
+  }
+    transition: background 0.25s ease, color 0.25s ease;
   }
 
   .page{
@@ -43,7 +88,27 @@
     flex-direction:column;
     align-items:center;
     gap: 30px;
+    position: relative;
+    z-index: 1;
   }
+
+  .theme-toggle{
+    position: fixed;
+    top: 18px;
+    right: 20px;
+    z-index: 2;
+    background:none;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    color: var(--social-color);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition: opacity 0.15s ease, transform 0.15s ease, color 0.25s ease;
+  }
+  .theme-toggle:hover{ opacity: 0.7; transform: translateY(-1px); }
+  .theme-toggle svg{ width:19px; height:19px; }
 
   .title-row{
     display:flex;
@@ -120,7 +185,7 @@
   }
   h1.title span:active{ transform: scale(0.85) !important; }
   .subtitle{
-    margin: -18px 0 0;
+    margin: var(--title-subtitle-gap) 0 0;
     font-weight: 700;
     opacity: 0.9;
     text-align:center;
@@ -212,6 +277,10 @@
 </head>
 <body>
 
+  <button class="theme-toggle" id="theme-toggle-btn" type="button" aria-label="Toggle theme">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path id="theme-toggle-icon" d=""/></svg>
+  </button>
+
   <main class="page">
 
     <div class="title-row">
@@ -290,6 +359,37 @@
   </main>
 
   <script>
+    // -----------------------------------------------------------
+    // Theme: same single-button toggle as index.html, sharing the
+    // same localStorage key so the choice made on either page
+    // carries over to the other. <html data-theme> was already set
+    // by the inline head script before this ran; here we just wire
+    // up the button and keep its icon in sync.
+    // -----------------------------------------------------------
+    const THEME_KEY = 'robot632_theme';
+    const THEME_ICONS = {
+      dark: 'M12 3a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm0 4.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 0 1 12 7.5ZM4 11a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2Zm18 0a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2ZM12 18a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1ZM5.6 5.6a1 1 0 0 1 1.4 0l.7.7a1 1 0 1 1-1.4 1.4l-.7-.7a1 1 0 0 1 0-1.4Zm10.7 10.7a1 1 0 0 1 1.4 0l.7.7a1 1 0 1 1-1.4 1.4l-.7-.7a1 1 0 0 1 0-1.4ZM18.4 5.6a1 1 0 0 1 0 1.4l-.7.7a1 1 0 1 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0ZM7.7 16.3a1 1 0 0 1 0 1.4l-.7.7a1 1 0 1 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0Z',
+      light: 'M20.354 15.354A9 9 0 0 1 8.646 3.646a9.003 9.003 0 1 0 11.708 11.708Z'
+    };
+
+    function getTheme(){
+      return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    }
+
+    function applyTheme(theme){
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem(THEME_KEY, theme);
+      const icon = document.getElementById('theme-toggle-icon');
+      if (icon) icon.setAttribute('d', THEME_ICONS[theme]);
+    }
+
+    function toggleTheme(){
+      applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
+    }
+
+    document.getElementById('theme-toggle-icon').setAttribute('d', THEME_ICONS[getTheme()]);
+    document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
+
     // -----------------------------------------------------------
     // Title fonts: same behavior as the wordmark on index.html --
     // a shared "font position" advances by one step every cycle,
