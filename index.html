@@ -113,6 +113,52 @@
 
   /* corner bolts -- echoes the rivets on the bot's face, gives the
      whole panel the feel of a maintenance hatch rather than a card */
+  /* hidden top-left trigger -- invisible at rest, a small robot
+     face fades in on hover/focus over the corner, leading to the
+     signal board page. same metal palette as the wordmark icon. */
+  .corner-trigger{
+    position:absolute;
+    top:0;
+    left:0;
+    width:72px;
+    height:72px;
+    z-index:5;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-decoration:none;
+  }
+  .corner-face{
+    width:36px;
+    height:26px;
+    border-radius:8px;
+    background: linear-gradient(155deg, #f2f3f5 0%, var(--icon-front) 40%, #c3c8ce 80%, var(--icon-side) 100%);
+    box-shadow:
+      inset 0 2px 3px rgba(255,255,255,0.85),
+      inset 0 -6px 8px rgba(0,0,0,0.18),
+      0 4px 10px rgba(0,0,0,0.32);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    opacity:0;
+    transform: scale(0.7);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .corner-eye{
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background: linear-gradient(180deg, #2c2f34, #45494f 60%, #575c63);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
+  }
+  .corner-trigger:hover .corner-face,
+  .corner-trigger:focus-visible .corner-face{
+    opacity:1;
+    transform: scale(1);
+  }
+  .corner-trigger:focus-visible{ outline:2px solid var(--text); outline-offset:4px; border-radius:10px; }
+
   .bolt{
     position:absolute;
     width:9px;
@@ -363,6 +409,12 @@
 <body>
 
   <main class="panel">
+    <a class="corner-trigger" href="walle.html" aria-label="???" title="???">
+      <span class="corner-face">
+        <span class="corner-eye"></span>
+        <span class="corner-eye"></span>
+      </span>
+    </a>
     <span class="bolt tl"></span>
     <span class="bolt tr"></span>
     <a class="bolt bl" href="terminal.html" aria-label="Open terminal" title="Open terminal"></a>
