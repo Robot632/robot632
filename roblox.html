@@ -63,6 +63,7 @@
     justify-content:center;
     padding: var(--page-padding-top) var(--page-padding-x) var(--page-padding-bottom);
     position: relative;
+    transition: background 0.25s ease, color 0.25s ease;
   }
 
   /* faint HUD scanline grid behind everything, matching index.html */
@@ -77,8 +78,6 @@
       linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
     background-size: 34px 34px;
     transition: background-image 0.25s ease;
-  }
-    transition: background 0.25s ease, color 0.25s ease;
   }
 
   .page{
