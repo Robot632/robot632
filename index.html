@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Robot632</title>
+<script>
+  // Runs before paint so the page never flashes the wrong theme.
+  (function(){
+    var saved = localStorage.getItem('robot632_theme');
+    var preferred = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.documentElement.dataset.theme = preferred;
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Nunito:wght@700;800&family=Bangers&family=Permanent+Marker&family=Kalam:wght@700&family=Chewy&family=Rubik:wght@700&display=swap" rel="stylesheet">
@@ -23,11 +31,33 @@
     --green: #2fb84f;
     --roblox-red: #e2242b;
     --panel-line: rgba(255,255,255,0.14);
+    --grid-line: rgba(255,255,255,0.06);
     --bolt: rgba(255,255,255,0.55);
+    --panel-bg: rgba(0,0,0,0.14);
+    --panel-border: rgba(255,255,255,0.18);
+    --tagline-bg: rgba(0,0,0,0.16);
+    --social-color: rgba(255,255,255,0.85);
 
     /* uniform button geometry -- every button on the page reads this */
     --btn-w: 226px;
     --btn-h: 56px;
+  }
+
+  /* Light theme -- toggled by adding data-theme="light" to <html>.
+     Only the surface colors change; accent colors (pink/blue/orange/
+     green/roblox-red) and icon metals stay the same in both themes. */
+  html[data-theme="light"]{
+    --bg: #eafaf6;
+    --bg-deep: #ffffff;
+    --text: #08403f;
+    --text-shadow: rgba(0,0,0,0.08);
+    --panel-line: rgba(0,90,90,0.12);
+    --grid-line: rgba(0,90,90,0.10);
+    --bolt: rgba(0,90,90,0.4);
+    --panel-bg: rgba(255,255,255,0.55);
+    --panel-border: rgba(0,90,90,0.15);
+    --tagline-bg: rgba(255,255,255,0.6);
+    --social-color: rgba(8,64,63,0.75);
   }
 
   *{ box-sizing: border-box; }
@@ -46,6 +76,7 @@
     align-items:center;
     justify-content:center;
     padding: 14px;
+    transition: background 0.25s ease, color 0.25s ease;
   }
 
   /* faint HUD scanline grid behind everything, ties the page to the
@@ -56,18 +87,18 @@
     inset:0;
     pointer-events:none;
     background-image:
-      linear-gradient(var(--panel-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--panel-line) 1px, transparent 1px);
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
     background-size: 34px 34px;
-    opacity: 0.15;
+    transition: background-image 0.25s ease;
   }
 
   .panel{
     position:relative;
     width:100%;
     height:100%;
-    background: rgba(0,0,0,0.14);
-    border: 2px solid rgba(255,255,255,0.18);
+    background: var(--panel-bg);
+    border: 2px solid var(--panel-border);
     border-radius: 24px;
     padding: clamp(28px, 6vh, 46px) clamp(18px, 6vw, 34px);
     display:flex;
@@ -77,6 +108,7 @@
     gap: clamp(16px, 3.5vh, 26px);
     overflow:auto;
     box-shadow: 0 30px 60px rgba(0,0,0,0.25);
+    transition: background 0.25s ease, border-color 0.25s ease;
   }
 
   /* corner bolts -- echoes the rivets on the bot's face, gives the
@@ -102,14 +134,25 @@
     gap: 14px;
   }
   .social-btn{
-    color: rgba(255,255,255,0.85);
+    color: var(--social-color);
     display:flex;
     align-items:center;
     justify-content:center;
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    transition: opacity 0.15s ease, transform 0.15s ease, color 0.25s ease;
   }
   .social-btn:hover{ opacity: 0.7; transform: translateY(-1px); }
   .social-btn svg{ width:auto; height:20px; }
+
+  /* theme toggle reuses the exact same look as a social icon so it
+     sits flush in that row -- just a button instead of a link */
+  .theme-toggle{
+    background:none;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    font: inherit;
+  }
+  .theme-toggle svg{ height:19px; }
 
   .title-row{
     display:flex;
@@ -250,15 +293,17 @@
   .tagline{
     font-weight: 800;
     font-size: 16px;
-    color: rgba(255,255,255,0.92);
+    color: var(--text);
+    opacity: 0.92;
     margin: -8px 0 0;
     max-width: 400px;
     line-height: 1.4;
     text-shadow: 0 1px 4px var(--text-shadow);
     padding: 10px 16px;
     border-radius: 12px;
-    background: rgba(0,0,0,0.16);
+    background: var(--tagline-bg);
     border: 1px solid var(--panel-line);
+    transition: background 0.25s ease, border-color 0.25s ease;
   }
 
   /* -----------------------------------------------------------
@@ -352,6 +397,11 @@
     // set visible: false to hide one without deleting its entry.
     const SOCIALS = [
       {
+        type: 'theme-toggle',
+        label: 'Toggle theme',
+        visible: true
+      },
+      {
         label: 'Youtube',
         href: 'https://www.youtube.com/@Robot632',
         path: 'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z',
@@ -365,6 +415,14 @@
       }
     ];
 
+    // Icons shown by the theme toggle -- sun when dark mode is active
+    // (click to go light), moon when light mode is active (click to
+    // go dark). Swap these paths to restyle the toggle icon itself.
+    const THEME_ICONS = {
+      dark: 'M12 3a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm0 4.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 0 1 12 7.5ZM4 11a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2Zm18 0a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2ZM12 18a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1ZM5.6 5.6a1 1 0 0 1 1.4 0l.7.7a1 1 0 1 1-1.4 1.4l-.7-.7a1 1 0 0 1 0-1.4Zm10.7 10.7a1 1 0 0 1 1.4 0l.7.7a1 1 0 1 1-1.4 1.4l-.7-.7a1 1 0 0 1 0-1.4ZM18.4 5.6a1 1 0 0 1 0 1.4l-.7.7a1 1 0 1 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0ZM7.7 16.3a1 1 0 0 1 0 1.4l-.7.7a1 1 0 1 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0Z',
+      light: 'M20.354 15.354A9 9 0 0 1 8.646 3.646a9.003 9.003 0 1 0 11.708 11.708Z'
+    };
+
     const BUTTONS = [
       { label: 'Roblox',  href: 'roblox.html', color: 'var(--roblox-red)', visible: true  },
       { label: 'About',   href: '#',           color: 'var(--orange)',     visible: false },
@@ -375,12 +433,52 @@
       const container = document.getElementById('socials');
       container.innerHTML = SOCIALS
         .filter(s => s.visible !== false)
-        .map(s => `
-          <a class="social-btn" href="${s.href}" aria-label="${s.label}">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="${s.path}"/></svg>
-          </a>
-        `).join('');
+        .map(s => {
+          if (s.type === 'theme-toggle'){
+            return `
+              <button class="social-btn theme-toggle" id="theme-toggle-btn" type="button" aria-label="${s.label}">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="${THEME_ICONS[getTheme()]}"/></svg>
+              </button>
+            `;
+          }
+          return `
+            <a class="social-btn" href="${s.href}" aria-label="${s.label}">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="${s.path}"/></svg>
+            </a>
+          `;
+        }).join('');
+
+      const toggleBtn = document.getElementById('theme-toggle-btn');
+      if (toggleBtn) toggleBtn.addEventListener('click', toggleTheme);
     }
+
+    // -----------------------------------------------------------
+    // Theme: one modular toggle button that flips the whole page
+    // between dark (default) and light via a single data-theme
+    // attribute on <html> -- every color on the page reads from
+    // the CSS variables set up in :root / [data-theme="light"].
+    // Preference is remembered across visits via localStorage.
+    // -----------------------------------------------------------
+    const THEME_KEY = 'robot632_theme';
+
+    function getTheme(){
+      return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    }
+
+    function applyTheme(theme){
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem(THEME_KEY, theme);
+      const icon = document.querySelector('#theme-toggle-btn path');
+      if (icon) icon.setAttribute('d', THEME_ICONS[theme]);
+    }
+
+    function toggleTheme(){
+      applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
+    }
+
+    // Theme was already applied by the inline head script before this
+    // ran (avoids a flash); this just makes sure it's set at all.
+    if (!document.documentElement.dataset.theme) applyTheme('dark');
 
     function renderButtons(){
       const container = document.getElementById('buttons');
