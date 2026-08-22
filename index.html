@@ -199,14 +199,16 @@
 
   /* theme toggle reuses the exact same look as a social icon so it
      sits flush in that row -- just a button instead of a link */
-  .theme-toggle{
+  .theme-toggle,
+  .sound-toggle{
     background:none;
     border:none;
     padding:0;
     cursor:pointer;
     font: inherit;
   }
-  .theme-toggle svg{ height:19px; }
+  .theme-toggle svg,
+  .sound-toggle svg{ height:19px; }
 
   .title-row{
     display:flex;
@@ -391,18 +393,25 @@
       color-mix(in srgb, var(--btn-color, var(--pink)) 75%, white) 0%,
       var(--btn-color, var(--pink)) 45%,
       color-mix(in srgb, var(--btn-color, var(--pink)) 80%, black) 100%);
+    /* the 0 6px 0 <dark> layer is a solid "lip" under the button, like
+       a real keycap -- :active collapses it to 0 so the button looks
+       like it physically sinks down onto the panel when pressed */
     box-shadow:
       inset 0 2px 0 rgba(255,255,255,0.55),
-      inset 0 -4px 8px rgba(0,0,0,0.28),
-      0 8px 16px rgba(0,0,0,0.28);
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
+      inset 0 -4px 8px rgba(0,0,0,0.22),
+      0 6px 0 color-mix(in srgb, var(--btn-color, var(--pink)) 55%, black),
+      0 11px 18px rgba(0,0,0,0.32);
+    transform: translateY(0);
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
   }
   .btn:hover{ transform: translateY(-2px); }
   .btn:active{
-    transform: translateY(1px);
+    transform: translateY(6px);
     box-shadow:
-      inset 0 3px 6px rgba(0,0,0,0.35),
-      0 3px 8px rgba(0,0,0,0.22);
+      inset 0 3px 8px rgba(0,0,0,0.4),
+      inset 0 -1px 0 rgba(255,255,255,0.1),
+      0 0 0 color-mix(in srgb, var(--btn-color, var(--pink)) 55%, black),
+      0 2px 3px rgba(0,0,0,0.25);
   }
 
 </style>
@@ -462,6 +471,11 @@
         visible: true
       },
       {
+        type: 'sound-toggle',
+        label: 'Toggle sound',
+        visible: true
+      },
+      {
         label: 'Youtube',
         href: 'https://www.youtube.com/@Robot632',
         path: 'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z',
@@ -483,6 +497,14 @@
       light: 'M20.354 15.354A9 9 0 0 1 8.646 3.646a9.003 9.003 0 1 0 11.708 11.708Z'
     };
 
+    // Icons shown by the sound toggle -- speaker-with-waves when sound
+    // is on (click to mute), speaker-with-x when muted (click to
+    // unmute). Same single-path swap pattern as THEME_ICONS above.
+    const SOUND_ICONS = {
+      on: 'M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.06 4.5 4.5 0 0 0 0-6.366.75.75 0 0 1 0-1.06Z',
+      off: 'M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM17.78 9.22a.75.75 0 1 0-1.06 1.06L18.44 12l-1.72 1.72a.75.75 0 0 0 1.06 1.06L19.5 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L20.56 12l1.72-1.72a.75.75 0 0 0-1.06-1.06L19.5 10.94l-1.72-1.72Z'
+    };
+
     const BUTTONS = [
       { label: 'Roblox',  href: 'roblox.html', color: 'var(--roblox-red)', visible: true  },
       { label: 'About',   href: '#',           color: 'var(--orange)',     visible: false },
@@ -501,6 +523,13 @@
               </button>
             `;
           }
+          if (s.type === 'sound-toggle'){
+            return `
+              <button class="social-btn sound-toggle" id="sound-toggle-btn" type="button" aria-label="${s.label}">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="${SOUND_ICONS[getSound()]}"/></svg>
+              </button>
+            `;
+          }
           return `
             <a class="social-btn" href="${s.href}" aria-label="${s.label}">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="${s.path}"/></svg>
@@ -510,6 +539,9 @@
 
       const toggleBtn = document.getElementById('theme-toggle-btn');
       if (toggleBtn) toggleBtn.addEventListener('click', toggleTheme);
+
+      const soundBtn = document.getElementById('sound-toggle-btn');
+      if (soundBtn) soundBtn.addEventListener('click', toggleSound);
     }
 
     // -----------------------------------------------------------
@@ -540,6 +572,32 @@
     // ran (avoids a flash); this just makes sure it's set at all.
     if (!document.documentElement.dataset.theme) applyTheme('dark');
 
+    // -----------------------------------------------------------
+    // Sound: same single-button, single-key pattern as the theme
+    // toggle above, but for muting audio site-wide. Shared
+    // localStorage key so muting/unmuting on any page carries over
+    // to every other page. Defaults to "on". Pages that actually
+    // play audio (e.g. walle.html) check window.robot632SoundOn()
+    // before making any sound.
+    // -----------------------------------------------------------
+    const SOUND_KEY = 'robot632_sound';
+
+    function getSound(){
+      return localStorage.getItem(SOUND_KEY) === 'off' ? 'off' : 'on';
+    }
+
+    function applySound(state){
+      localStorage.setItem(SOUND_KEY, state);
+      const icon = document.querySelector('#sound-toggle-btn path');
+      if (icon) icon.setAttribute('d', SOUND_ICONS[state]);
+    }
+
+    function toggleSound(){
+      applySound(getSound() === 'on' ? 'off' : 'on');
+    }
+
+    window.robot632SoundOn = () => getSound() === 'on';
+
     function renderButtons(){
       const container = document.getElementById('buttons');
       container.innerHTML = BUTTONS
@@ -547,6 +605,68 @@
         .map(b => `
           <a class="btn" style="--btn-color:${b.color}" href="${b.href}">${b.label}</a>
         `).join('');
+
+      container.querySelectorAll('.btn').forEach(btn => {
+        btn.addEventListener('pointerdown', playClickSound);
+      });
+    }
+
+    // -----------------------------------------------------------
+    // Click sound: a short mechanical "click" -- a filtered noise
+    // transient (the actual "click") plus a quick low thock (the
+    // body of the press), synthesized live so no audio file is
+    // needed. Fires on pointerdown so it lands right as the button
+    // visually sinks down. Respects the global sound toggle.
+    //
+    // CLICK_VOLUME: overall loudness, 0 (silent) to 1 (full peak
+    // gains below). Change this one number to make every click
+    // quieter/louder -- currently set around 65-70%.
+    // -----------------------------------------------------------
+    const CLICK_VOLUME = 0.68;
+
+    let clickAudioCtx;
+    function getClickCtx(){
+      if (!clickAudioCtx) clickAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (clickAudioCtx.state === 'suspended') clickAudioCtx.resume();
+      return clickAudioCtx;
+    }
+
+    function playClickSound(){
+      if (!window.robot632SoundOn || !window.robot632SoundOn()) return;
+      const c = getClickCtx();
+      const t0 = c.currentTime;
+
+      // noise burst -- the crisp "tick" of the click
+      const dur = 0.03;
+      const buffer = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++){
+        data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      }
+      const noise = c.createBufferSource();
+      noise.buffer = buffer;
+      const noiseFilter = c.createBiquadFilter();
+      noiseFilter.type = 'highpass';
+      noiseFilter.frequency.value = 2200;
+      const noiseGain = c.createGain();
+      noiseGain.gain.setValueAtTime(0.3 * CLICK_VOLUME, t0);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+      noise.connect(noiseFilter).connect(noiseGain).connect(c.destination);
+      noise.start(t0);
+      noise.stop(t0 + dur);
+
+      // low thock -- the felt "weight" of the button bottoming out
+      const osc = c.createOscillator();
+      const oscGain = c.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(190, t0);
+      osc.frequency.exponentialRampToValueAtTime(75, t0 + 0.08);
+      oscGain.gain.setValueAtTime(0.0001, t0);
+      oscGain.gain.exponentialRampToValueAtTime(0.28 * CLICK_VOLUME, t0 + 0.006);
+      oscGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.1);
+      osc.connect(oscGain).connect(c.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.11);
     }
 
     renderSocials();
