@@ -1,4 +1,4 @@
-My bomboclat site
+Site: https://robot632.github.io/robot632/
 
 <!--
 **Robot632/robot632** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
