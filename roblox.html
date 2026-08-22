@@ -92,7 +92,8 @@
     z-index: 1;
   }
 
-  .theme-toggle{
+  .theme-toggle,
+  .sound-toggle{
     position: fixed;
     top: 18px;
     right: 20px;
@@ -107,8 +108,12 @@
     justify-content:center;
     transition: opacity 0.15s ease, transform 0.15s ease, color 0.25s ease;
   }
-  .theme-toggle:hover{ opacity: 0.7; transform: translateY(-1px); }
-  .theme-toggle svg{ width:19px; height:19px; }
+  .theme-toggle:hover,
+  .sound-toggle:hover{ opacity: 0.7; transform: translateY(-1px); }
+  .theme-toggle svg,
+  .sound-toggle svg{ width:19px; height:19px; }
+  /* sound toggle sits just to the left of the theme toggle */
+  .sound-toggle{ right: 52px; }
 
   .title-row{
     display:flex;
@@ -280,6 +285,9 @@
   <button class="theme-toggle" id="theme-toggle-btn" type="button" aria-label="Toggle theme">
     <svg viewBox="0 0 24 24" fill="currentColor"><path id="theme-toggle-icon" d=""/></svg>
   </button>
+  <button class="sound-toggle" id="sound-toggle-btn" type="button" aria-label="Toggle sound">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path id="sound-toggle-icon" d=""/></svg>
+  </button>
 
   <main class="page">
 
@@ -389,6 +397,36 @@
 
     document.getElementById('theme-toggle-icon').setAttribute('d', THEME_ICONS[getTheme()]);
     document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
+
+    // -----------------------------------------------------------
+    // Sound: same single-button pattern as the theme toggle, but
+    // mutes audio site-wide. Shared localStorage key, so muting on
+    // any page carries over to every other page. Defaults to "on".
+    // -----------------------------------------------------------
+    const SOUND_KEY = 'robot632_sound';
+    const SOUND_ICONS = {
+      on: 'M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.06 4.5 4.5 0 0 0 0-6.366.75.75 0 0 1 0-1.06Z',
+      off: 'M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM17.78 9.22a.75.75 0 1 0-1.06 1.06L18.44 12l-1.72 1.72a.75.75 0 0 0 1.06 1.06L19.5 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L20.56 12l1.72-1.72a.75.75 0 0 0-1.06-1.06L19.5 10.94l-1.72-1.72Z'
+    };
+
+    function getSound(){
+      return localStorage.getItem(SOUND_KEY) === 'off' ? 'off' : 'on';
+    }
+
+    function applySound(state){
+      localStorage.setItem(SOUND_KEY, state);
+      const icon = document.getElementById('sound-toggle-icon');
+      if (icon) icon.setAttribute('d', SOUND_ICONS[state]);
+    }
+
+    function toggleSound(){
+      applySound(getSound() === 'on' ? 'off' : 'on');
+    }
+
+    window.robot632SoundOn = () => getSound() === 'on';
+
+    document.getElementById('sound-toggle-icon').setAttribute('d', SOUND_ICONS[getSound()]);
+    document.getElementById('sound-toggle-btn').addEventListener('click', toggleSound);
 
     // -----------------------------------------------------------
     // Title fonts: same behavior as the wordmark on index.html --
