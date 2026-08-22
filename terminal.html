@@ -200,7 +200,7 @@
     line-height:1.25;
     color: var(--accent-bright);
   }
-  #log{ overflow-x:auto; }
+  #log{ overflow-x:hidden; }
 
   .line{ white-space:pre-wrap; word-break:break-word; margin:0 0 2px; }
   .line.dim{ color: var(--accent-dim); }
@@ -599,8 +599,8 @@
 
   function runCommand(raw){
     const trimmed = raw.trim();
-    printCommandEcho(raw);
     if (!trimmed){ return; }
+    printCommandEcho(raw);
 
     history.push(raw);
     historyIndex = history.length;
@@ -624,7 +624,10 @@
     // Enter -- skip modifiers, arrows, Escape, etc. so it only
     // ticks for genuine "typing"
     const isPrintable = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
-    if (isPrintable || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Enter'){
+    // e.repeat is true for the auto-repeated keydowns fired while a key
+    // is held down -- skip those so holding Enter can't flood the click
+    // sound with overlapping/queued playback.
+    if ((isPrintable || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Enter') && !e.repeat){
       playTypingSound(e.key);
     }
 
@@ -667,12 +670,17 @@
   }
 
   if (splashEl){
-    document.addEventListener('keydown', function onSplashKey(e){
+    function onSplashKey(e){
       if (e.key !== 'Enter') return;
       document.removeEventListener('keydown', onSplashKey);
       startBoot();
-    });
-    splashEl.addEventListener('click', startBoot);
+    }
+    function onSplashClick(){
+      document.removeEventListener('keydown', onSplashKey);
+      startBoot();
+    }
+    document.addEventListener('keydown', onSplashKey);
+    splashEl.addEventListener('click', onSplashClick);
   } else {
     boot();
   }
