@@ -607,66 +607,112 @@
         `).join('');
 
       container.querySelectorAll('.btn').forEach(btn => {
-        btn.addEventListener('pointerdown', playClickSound);
+        btn.addEventListener('pointerdown', handleButtonPointerDown);
+        btn.addEventListener('click', handleButtonClick);
       });
     }
 
     // -----------------------------------------------------------
-    // Click sound: a short mechanical "click" -- a filtered noise
-    // transient (the actual "click") plus a quick low thock (the
-    // body of the press), synthesized live so no audio file is
-    // needed. Fires on pointerdown so it lands right as the button
-    // visually sinks down. Respects the global sound toggle.
+    // Click sound: a real recorded mouse-click SFX (not synthesized),
+    // "Mouse Click Sound.mp3" by Pixeliota on Freesound, CC0 (public
+    // domain) -- https://freesound.org/people/Pixeliota/sounds/678248/
     //
-    // CLICK_VOLUME: overall loudness, 0 (silent) to 1 (full peak
-    // gains below). Change this one number to make every click
-    // quieter/louder -- currently set around 65-70%.
+    // CLICK_VOLUME: overall loudness, 0 (silent) to 1 (full volume).
+    //
+    // The source file has a bit of near-silence at the very start
+    // before the actual click transient begins. On load the file is
+    // fetched once and decoded (decodeAudioData) to auto-detect
+    // where real sound begins (first sample past a small silence
+    // threshold). Playback starts from that point, and the "how long
+    // to wait before navigating" duration is shortened by the same
+    // amount, so nothing sits through unused time at the start.
     // -----------------------------------------------------------
     const CLICK_VOLUME = 0.68;
+    const CLICK_SOUND_URL = 'https://cdn.freesound.org/previews/678/678248_7806746-lq.mp3';
+    const CLICK_FALLBACK_DURATION = 0.3; // used only if analysis hasn't finished yet
+    const CLICK_SILENCE_THRESHOLD = 0.02; // amplitude below this counts as "silence"
 
-    let clickAudioCtx;
-    function getClickCtx(){
-      if (!clickAudioCtx) clickAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (clickAudioCtx.state === 'suspended') clickAudioCtx.resume();
-      return clickAudioCtx;
+    let clickTrimStart = 0;          // seconds of leading silence to skip
+    let clickSoundDuration = null;   // full file duration, once known
+    let clickAnalysisReady = false;
+
+    (async function analyzeClickSound(){
+      try{
+        const resp = await fetch(CLICK_SOUND_URL);
+        const arrayBuffer = await resp.arrayBuffer();
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const buffer = await ctx.decodeAudioData(arrayBuffer);
+        const data = buffer.getChannelData(0);
+
+        let startSample = 0;
+        for (let i = 0; i < data.length; i++){
+          if (Math.abs(data[i]) > CLICK_SILENCE_THRESHOLD){ startSample = i; break; }
+        }
+
+        clickTrimStart = startSample / buffer.sampleRate;
+        clickSoundDuration = buffer.duration;
+        clickAnalysisReady = true;
+      } catch (e){
+        // Fetch/decode failed (e.g. offline) -- fall back to playing
+        // the file untrimmed from the start.
+        clickAnalysisReady = true;
+      }
+    })();
+
+    // Plays the click sound (skipping any leading silence) and
+    // resolves with how long the remaining, audible part will take
+    // to finish playing.
+    function playClickSound(){
+      return new Promise((resolve) => {
+        const audio = new Audio(CLICK_SOUND_URL);
+        audio.volume = CLICK_VOLUME;
+
+        function playAndResolve(){
+          if (clickTrimStart > 0) audio.currentTime = clickTrimStart;
+          audio.play().catch(() => {});
+          const fullDuration = (audio.duration && isFinite(audio.duration)) ? audio.duration : (clickSoundDuration || CLICK_FALLBACK_DURATION);
+          resolve(Math.max(0, fullDuration - clickTrimStart));
+        }
+
+        if (audio.readyState >= 1 && clickAnalysisReady){
+          playAndResolve();
+        } else {
+          audio.addEventListener('loadedmetadata', playAndResolve, { once: true });
+          // in case the file is slow/unreachable, don't block navigation forever
+          setTimeout(() => resolve(Math.max(0, (clickSoundDuration || CLICK_FALLBACK_DURATION) - clickTrimStart)), 800);
+        }
+      });
     }
 
-    function playClickSound(){
-      if (!window.robot632SoundOn || !window.robot632SoundOn()) return;
-      const c = getClickCtx();
-      const t0 = c.currentTime;
+    // The sound is started on pointerdown -- the instant the button's
+    // press animation (:active, translateY) begins -- rather than on
+    // click, which only fires after the press-and-release cycle has
+    // already played out. Each button's in-flight sound promise (and
+    // the moment it started) is tracked here so the click handler
+    // (fired later) can wait only on whatever time is actually left,
+    // instead of starting a second sound or over-waiting.
+    const pendingClickSounds = new WeakMap();
 
-      // noise burst -- the crisp "tick" of the click
-      const dur = 0.03;
-      const buffer = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++){
-        data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-      }
-      const noise = c.createBufferSource();
-      noise.buffer = buffer;
-      const noiseFilter = c.createBiquadFilter();
-      noiseFilter.type = 'highpass';
-      noiseFilter.frequency.value = 2200;
-      const noiseGain = c.createGain();
-      noiseGain.gain.setValueAtTime(0.3 * CLICK_VOLUME, t0);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-      noise.connect(noiseFilter).connect(noiseGain).connect(c.destination);
-      noise.start(t0);
-      noise.stop(t0 + dur);
+    function handleButtonPointerDown(e){
+      const soundOn = window.robot632SoundOn && window.robot632SoundOn();
+      const promise = soundOn ? playClickSound() : Promise.resolve(0);
+      pendingClickSounds.set(e.currentTarget, { promise });
+    }
 
-      // low thock -- the felt "weight" of the button bottoming out
-      const osc = c.createOscillator();
-      const oscGain = c.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(190, t0);
-      osc.frequency.exponentialRampToValueAtTime(75, t0 + 0.08);
-      oscGain.gain.setValueAtTime(0.0001, t0);
-      oscGain.gain.exponentialRampToValueAtTime(0.28 * CLICK_VOLUME, t0 + 0.006);
-      oscGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.1);
-      osc.connect(oscGain).connect(c.destination);
-      osc.start(t0);
-      osc.stop(t0 + 0.11);
+    // Only navigates to the button's href once the sound that started
+    // back on pointerdown has actually finished playing, instead of
+    // cutting it off by switching pages immediately.
+    async function handleButtonClick(e){
+      const href = e.currentTarget.getAttribute('href');
+      if (!href) return;
+      e.preventDefault();
+
+      const pending = pendingClickSounds.get(e.currentTarget) || { promise: Promise.resolve(0) };
+      const fullWaitSeconds = await pending.promise;
+
+      // Always wait out the sound's full duration -- not shortened by
+      // however much time already passed since pointerdown.
+      setTimeout(() => { window.location.href = href; }, fullWaitSeconds * 1000);
     }
 
     renderSocials();
