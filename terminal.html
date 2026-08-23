@@ -618,17 +618,62 @@
     else if (Array.isArray(result)) printLines(result);
   }
 
+  // Mobile virtual keyboards are unreliable for sound purposes on
+  // keydown: many on-screen keyboards go through an IME, so e.key
+  // comes back as "Unidentified" for basically every key (that's why
+  // typing sound never fired -- the old code required e.key.length===1)
+  // and e.repeat is never set true while a key is held (that's why
+  // holding Backspace spammed overlapping sounds).
+  //
+  // Fix: track the actual physical press/release (down/up), which
+  // *does* fire reliably even when e.key is "Unidentified" -- we only
+  // need to know a key is down, not which one. One sound plays per
+  // press; while that key stays held, no more sounds fire (matching
+  // native OS key-repeat behavior on desktop); releasing and pressing
+  // again (however fast) plays a fresh sound each time.
+  let keyHeld = false;
+  let soundFiredForHold = false;
+
+  function maybePlayTypingSound(key){
+    if (soundFiredForHold) return; // already sounded for this held press
+    soundFiredForHold = true;
+    playTypingSound(key);
+  }
+
+  function onPressStart(){
+    keyHeld = true;
+    // don't reset soundFiredForHold here -- it's reset on release,
+    // and starts false so the very first press of the session plays.
+  }
+  function onPressEnd(){
+    keyHeld = false;
+    soundFiredForHold = false;
+  }
+
   input.addEventListener('keydown', (e) => {
-    // typing click: any key that actually changes the text (a
-    // single printable character, Backspace, Space, Delete), plus
-    // Enter -- skip modifiers, arrows, Escape, etc. so it only
-    // ticks for genuine "typing"
-    const isPrintable = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
-    // e.repeat is true for the auto-repeated keydowns fired while a key
-    // is held down -- skip those so holding Enter can't flood the click
-    // sound with overlapping/queued playback.
-    if ((isPrintable || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Enter') && !e.repeat){
-      playTypingSound(e.key);
+    if (!keyHeld) onPressStart();
+  });
+  input.addEventListener('keyup', onPressEnd);
+  input.addEventListener('blur', onPressEnd); // mobile can lose focus without a keyup
+
+  input.addEventListener('input', (e) => {
+    const type = e.inputType || '';
+    if (type.startsWith('delete')){
+      maybePlayTypingSound('Backspace');
+    } else if (type.startsWith('insert')){
+      // e.data holds the actual character when available (typed key,
+      // pasted text, autocomplete, etc.) -- only ' ' gets special
+      // treatment, everything else uses the generic click sound.
+      maybePlayTypingSound(e.data === ' ' ? ' ' : 'a');
+    }
+  });
+
+  input.addEventListener('keydown', (e) => {
+    // Enter doesn't change the input's value, so it never fires an
+    // 'input' event -- trigger its sound here instead, through the
+    // same press/release-gated helper so holding Enter can't spam it.
+    if (e.key === 'Enter'){
+      maybePlayTypingSound('Enter');
     }
 
     if (e.key === 'Enter'){
