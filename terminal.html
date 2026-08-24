@@ -172,7 +172,6 @@
 
   .screen{
     position:relative;
-    z-index:2;
     height:100%;
     padding: 44px 22px 16px;
     overflow-y:auto;
@@ -206,6 +205,33 @@
   .line.dim{ color: var(--accent-dim); }
   .line.err{ color: var(--err); text-shadow:0 0 6px rgba(255,111,111,0.5); }
   .line.accent{ color: var(--accent-bright); }
+
+  /* Photo lines, e.g. "::img::my-photo.jpg" -- the filename is
+     resolved relative to this HTML file, so drop the image in the
+     same folder as this page and reference it by filename.
+     z-index:4 puts it above the scanline/vignette overlay
+     (.crt::before / .crt::after are z-index:3) so the CRT lines
+     don't get drawn over the photo. This only works because
+     .screen no longer sets its own z-index -- if .screen has a
+     z-index, it becomes a stacking context of its own and traps
+     this z-index:4 inside it, where it can never outrank the
+     overlay again. No filter/text-shadow is applied, so the photo
+     keeps its real colors -- nothing here recolors it toward the
+     phosphor palette. */
+  .line.img-line{
+    position:relative;
+    z-index:4;
+    margin:10px 0 12px;
+    text-shadow:none;
+  }
+  .line.img-line img{
+    display:block;
+    max-width:100%;
+    height:auto;
+    border-radius:6px;
+    filter:none;
+    -webkit-filter:none;
+  }
 
   .row{ display:flex; }
   .prompt{ flex-shrink:0; color: var(--accent-bright); margin-right:6px; }
@@ -365,7 +391,9 @@
         'purchased: 31 July 2026',
         'status: not arrived (as of 21.08)',
         'will update you guys.',
-        'as of 24.08 it will arrive tomorrow but i am at my grandparents(maybe will put a photo)'
+        'as of 24.08 it will arrive tomorrow but i am at my grandparents(maybe will put a photo)',
+        '::img::toast-rebuild-ios6.png',
+	'not made by me! this is the name of cfw that i will put on my vector!'
       ];
     },
     devices(){
@@ -413,6 +441,20 @@
     let content = text;
     const m = /^::([\w-]+)::([\s\S]*)$/.exec(text);
     if (m){ cls += ' ' + m[1]; content = m[2]; }
+
+    // "::img::filename.ext" -- content is a filename that lives
+    // next to this HTML file. Everything else about print()/
+    // printLines() is untouched; this is the only new branch.
+    if (m && m[1] === 'img'){
+      div.className = 'line img-line';
+      const img = document.createElement('img');
+      img.src = content.trim();
+      img.alt = '';
+      img.loading = 'lazy';
+      div.appendChild(img);
+      return div;
+    }
+
     div.className = cls;
     div.textContent = content;
     return div;
