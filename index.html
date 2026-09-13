@@ -343,6 +343,9 @@
     cursor: pointer;
     transition: transform 0.25s ease;
     text-shadow: 0 2px 6px var(--text-shadow);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   .wordmark span:active{ transform: scale(0.85) !important; }
 
@@ -901,36 +904,64 @@
     // letter that's just tapped rather than dragged.
     // -----------------------------------------------------------
     const DRAG_THRESHOLD = 4; // px of movement before it counts as a drag
+    const DRAG_SAFE_MARGIN = 4; // px kept clear of the panel's true edge
+    const panelEl = document.querySelector('.panel');
+    let activeLetterDrags = 0; // tracks concurrent drags (e.g. multi-touch)
 
     letters.forEach((letter, i) => {
       letter.style.touchAction = 'none';
       let dragging = false;
       let dragged = false;
       let startX = 0, startY = 0;
+      let minDx = 0, maxDx = 0, minDy = 0, maxDy = 0;
 
       letter.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); // stop the browser starting a text/image drag or selection
         dragging = true;
         dragged = false;
         startX = e.clientX;
         startY = e.clientY;
         letter.setPointerCapture(e.pointerId);
         letter.style.zIndex = 10;
+
+        // Belt-and-suspenders against a scrollbar appearing mid-drag:
+        // lock .panel's own scrolling off entirely while a letter is
+        // being dragged (restored the moment every drag has ended),
+        // regardless of what would have triggered the overflow.
+        activeLetterDrags++;
+        panelEl.style.overflow = 'hidden';
+
+        // Also work out how far this letter can move in each
+        // direction before it would cross the panel's real edge, so
+        // it visually never flies past the panel border either.
+        const letterRect = letter.getBoundingClientRect();
+        const panelRect = panelEl.getBoundingClientRect();
+        minDx = panelRect.left + DRAG_SAFE_MARGIN - letterRect.left;
+        maxDx = panelRect.right - DRAG_SAFE_MARGIN - letterRect.right;
+        minDy = panelRect.top + DRAG_SAFE_MARGIN - letterRect.top;
+        maxDy = panelRect.bottom - DRAG_SAFE_MARGIN - letterRect.bottom;
       });
 
       letter.addEventListener('pointermove', (e) => {
         if (!dragging) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
+        let dx = e.clientX - startX;
+        let dy = e.clientY - startY;
         if (!dragged && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)){
           dragged = true;
         }
-        if (dragged) letter.style.translate = `${dx}px ${dy}px`;
+        if (dragged){
+          dx = Math.min(Math.max(dx, minDx), maxDx);
+          dy = Math.min(Math.max(dy, minDy), maxDy);
+          letter.style.translate = `${dx}px ${dy}px`;
+        }
       });
 
       function releaseLetter(e){
         if (!dragging) return;
         dragging = false;
         letter.style.zIndex = '';
+        activeLetterDrags = Math.max(0, activeLetterDrags - 1);
+        if (activeLetterDrags === 0) panelEl.style.overflow = '';
         if (dragged){
           const current = letter.style.translate || '0px 0px';
           letter.style.translate = '0px 0px';
