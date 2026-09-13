@@ -414,6 +414,111 @@
       0 2px 3px rgba(0,0,0,0.25);
   }
 
+  /* Feature: idle blink -- the main icon's eyes squash briefly. */
+  @keyframes eye-blink{
+    0%, 100% { transform: scaleY(1); }
+    45%, 55% { transform: scaleY(0.12); }
+  }
+  .bot-icon .eye.blinking{ animation: eye-blink 0.34s ease; }
+
+  /* Feature: DVD-logo-style bouncing droid after a long idle
+     stretch. A little sentry-turret silhouette -- oval body, one
+     glowing red eye, angled side wings, thin tripod legs -- kept
+     as an original shape built from CSS primitives rather than any
+     copied artwork, so it reads as its own little visitor rather
+     than a clone of the main icon. Uses the standalone
+     `translate`/`rotate`/`scale` CSS properties (rather than one
+     combined `transform`) so movement and the bounce squish can be
+     driven independently. */
+  .dvd-bot{
+    position:absolute;
+    top:0; left:0;
+    width:26px;
+    height:34px;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:6;
+    pointer-events:none;
+    will-change: translate;
+  }
+  .dvd-body{
+    position:absolute;
+    inset:0;
+    border-radius: 50% 50% 42% 42% / 58% 58% 42% 42%;
+    background: linear-gradient(155deg, #f6f7f8 0%, var(--icon-front) 45%, #c3c8ce 82%, var(--icon-side) 100%);
+    box-shadow:
+      inset 0 3px 4px rgba(255,255,255,0.9),
+      inset 0 -8px 10px rgba(0,0,0,0.2);
+    animation: dvd-glow-pulse 1s ease-in-out infinite;
+  }
+  .dvd-bot::before{
+    /* antenna stalk */
+    content:'';
+    position:absolute;
+    top:-9px;
+    left:50%;
+    translate: -50% 0;
+    width:2px;
+    height:9px;
+    border-radius:2px;
+    background: linear-gradient(90deg, var(--icon-dark), var(--icon-front) 45%, var(--icon-side));
+  }
+  .dvd-eye{
+    position:relative;
+    width:11px;
+    height:11px;
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #ffe2e2, #ff3b3b 45%, #7a0000 100%);
+    box-shadow:
+      0 0 7px 3px rgba(255,45,45,0.85),
+      inset 0 0 3px rgba(0,0,0,0.4);
+    z-index:2;
+  }
+  .dvd-wing{
+    position:absolute;
+    top:26%;
+    width:8px;
+    height:19px;
+    border-radius: 45% 15% 45% 15%;
+    background: linear-gradient(160deg, #eceef0, var(--icon-side) 60%, var(--icon-dark) 100%);
+    box-shadow: inset 0 0 3px rgba(0,0,0,0.3);
+    z-index:1;
+  }
+  .dvd-wing-left{ left:-5px; rotate: -14deg; }
+  .dvd-wing-right{ right:-5px; rotate: 14deg; scale: -1 1; }
+  .dvd-leg{
+    position:absolute;
+    top:26px;
+    left:12px;
+    width:2px;
+    height:15px;
+    border-radius:1px;
+    background: linear-gradient(180deg, var(--icon-dark), #1c1e22 100%);
+    transform-origin: top center;
+  }
+  .dvd-leg-left{ rotate:-24deg; }
+  .dvd-leg-mid{ rotate:0deg; }
+  .dvd-leg-right{ rotate:24deg; }
+
+  /* the whole droid's body glows red, not just the eye, pulsing
+     gently while it's active and flashing brighter on each bounce */
+  @keyframes dvd-glow-pulse{
+    0%, 100%{ box-shadow: inset 0 3px 4px rgba(255,255,255,0.9), inset 0 -8px 10px rgba(0,0,0,0.2), 0 0 16px 4px rgba(255,40,40,0.45); }
+    50%{ box-shadow: inset 0 3px 4px rgba(255,255,255,0.9), inset 0 -8px 10px rgba(0,0,0,0.2), 0 0 26px 8px rgba(255,40,40,0.65); }
+  }
+
+  /* Feature: visit counter, styled as a smaller sibling of .tagline. */
+  .visit-counter{
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text);
+    opacity: 0.6;
+    margin: -10px 0 0;
+    text-shadow: 0 1px 4px var(--text-shadow);
+    letter-spacing: 0.02em;
+  }
+
 </style>
 </head>
 <body>
@@ -432,6 +537,16 @@
 
     <div class="socials" id="socials"></div>
 
+    <div class="dvd-bot" id="dvd-bot" aria-hidden="true">
+      <span class="dvd-body"></span>
+      <span class="dvd-wing dvd-wing-left"></span>
+      <span class="dvd-wing dvd-wing-right"></span>
+      <span class="dvd-leg dvd-leg-left"></span>
+      <span class="dvd-leg dvd-leg-mid"></span>
+      <span class="dvd-leg dvd-leg-right"></span>
+      <span class="dvd-eye"></span>
+    </div>
+
     <div class="title-row">
       <div class="bot-icon">
         <div class="antenna"></div>
@@ -449,6 +564,7 @@
       </h1>
     </div>
     <p class="tagline" id="tagline">just a robot doing robot things, also i play roblox i think</p>
+    <p class="visit-counter" id="visit-counter"></p>
 
     <div class="buttons" id="buttons"></div>
   </main>
@@ -777,8 +893,59 @@
       );
     }
 
+    // -----------------------------------------------------------
+    // Feature: letters are draggable -- pick one up and it follows
+    // the pointer, let go and it springs back to place. A drag is
+    // distinguished from a plain click by movement distance, so
+    // the existing click-to-cycle-font behavior still works for a
+    // letter that's just tapped rather than dragged.
+    // -----------------------------------------------------------
+    const DRAG_THRESHOLD = 4; // px of movement before it counts as a drag
+
     letters.forEach((letter, i) => {
+      letter.style.touchAction = 'none';
+      let dragging = false;
+      let dragged = false;
+      let startX = 0, startY = 0;
+
+      letter.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        dragged = false;
+        startX = e.clientX;
+        startY = e.clientY;
+        letter.setPointerCapture(e.pointerId);
+        letter.style.zIndex = 10;
+      });
+
+      letter.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (!dragged && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)){
+          dragged = true;
+        }
+        if (dragged) letter.style.translate = `${dx}px ${dy}px`;
+      });
+
+      function releaseLetter(e){
+        if (!dragging) return;
+        dragging = false;
+        letter.style.zIndex = '';
+        if (dragged){
+          const current = letter.style.translate || '0px 0px';
+          letter.style.translate = '0px 0px';
+          letter.animate(
+            [{ translate: current }, { translate: '0px 0px' }],
+            { duration: 480, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+          );
+        }
+      }
+
+      letter.addEventListener('pointerup', releaseLetter);
+      letter.addEventListener('pointercancel', releaseLetter);
+
       letter.addEventListener('click', () => {
+        if (dragged) { dragged = false; return; } // a drag just ended, don't also cycle the font
         letterOffsets[i] = (letterOffsets[i] + 1) % FONTS.length;
         applyFont(letter, i);
         bounceLetter(letter);
@@ -813,6 +980,115 @@
       const el = document.getElementById('tagline');
       if (el) el.textContent = TAGLINES[index];
     })();
+
+    // -----------------------------------------------------------
+    // Feature: visit counter -- "you've powered me on X times".
+    // Simple localStorage tally, one increment per page load.
+    // -----------------------------------------------------------
+    (function trackVisits(){
+      const VISIT_KEY = 'robot632_visits';
+      let count = parseInt(localStorage.getItem(VISIT_KEY), 10);
+      if (isNaN(count)) count = 0;
+      count += 1;
+      localStorage.setItem(VISIT_KEY, count);
+
+      const el = document.getElementById('visit-counter');
+      if (el) el.textContent = `powered on ${count} time${count === 1 ? '' : 's'}`;
+    })();
+
+    // -----------------------------------------------------------
+    // Feature: idle animations. After a short idle stretch the
+    // main icon's eyes blink every few seconds. After a longer
+    // idle stretch, a tiny bouncing face joins in, DVD-screensaver
+    // style, until any interaction stops it.
+    // -----------------------------------------------------------
+    const IDLE_BLINK_DELAY = 4000;   // ms of inactivity before blinking starts
+    const IDLE_DVD_DELAY   = 26000;  // ms of inactivity before the DVD bounce starts
+
+    const eyes = document.querySelectorAll('.bot-icon .eye');
+    const dvdBot = document.getElementById('dvd-bot');
+
+    let idleBlinkTimer = null;
+    let blinkLoopTimer = null;
+    let idleDvdTimer = null;
+    let dvdRAF = null;
+
+    function blinkEyes(){
+      eyes.forEach(eye => {
+        eye.classList.remove('blinking');
+        void eye.offsetWidth; // restart the animation each time
+        eye.classList.add('blinking');
+      });
+      blinkLoopTimer = setTimeout(blinkEyes, 2200 + Math.random() * 2600);
+    }
+
+    function startDvdBounce(){
+      if (!dvdBot) return;
+      const panel = document.querySelector('.panel');
+      const DVD_W = 26;   // body width
+      const DVD_H = 41;   // body height + legs, so the legs stay on-panel too
+      const MARGIN = 16;  // keeps the wings/legs' visual overhang from ever
+                          // crossing the panel's real edge and forcing a scrollbar
+
+      let bounds = panel.getBoundingClientRect();
+      let x = MARGIN + Math.random() * Math.max(0, bounds.width - DVD_W - MARGIN * 2);
+      let y = MARGIN + Math.random() * Math.max(0, bounds.height - DVD_H - MARGIN * 2);
+      let vx = (Math.random() < 0.5 ? -1 : 1) * 1.4;
+      let vy = (Math.random() < 0.5 ? -1 : 1) * 1.4;
+
+      dvdBot.style.display = 'flex';
+      dvdBot.style.scale = '1';
+
+      function squish(){
+        dvdBot.animate(
+          [
+            { scale: '1 1' },
+            { scale: '1.25 0.8' },
+            { scale: '1 1' }
+          ],
+          { duration: 260, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+        );
+      }
+
+      function step(){
+        bounds = panel.getBoundingClientRect();
+        const minX = MARGIN;
+        const minY = MARGIN;
+        const maxX = Math.max(minX, bounds.width - DVD_W - MARGIN);
+        const maxY = Math.max(minY, bounds.height - DVD_H - MARGIN);
+        x += vx;
+        y += vy;
+        let bounced = false;
+        if (x <= minX || x >= maxX){ vx *= -1; x = Math.min(Math.max(x, minX), maxX); bounced = true; }
+        if (y <= minY || y >= maxY){ vy *= -1; y = Math.min(Math.max(y, minY), maxY); bounced = true; }
+        if (bounced) squish();
+        // slight lean in the direction of travel, purely cosmetic
+        dvdBot.style.rotate = `${vx * 4}deg`;
+        dvdBot.style.translate = `${x}px ${y}px`;
+        dvdRAF = requestAnimationFrame(step);
+      }
+      dvdRAF = requestAnimationFrame(step);
+    }
+
+    function stopDvdBounce(){
+      if (dvdRAF) cancelAnimationFrame(dvdRAF);
+      dvdRAF = null;
+      if (dvdBot) dvdBot.style.display = 'none';
+    }
+
+    function resetIdle(){
+      clearTimeout(idleBlinkTimer);
+      clearTimeout(blinkLoopTimer);
+      clearTimeout(idleDvdTimer);
+      stopDvdBounce();
+      idleBlinkTimer = setTimeout(blinkEyes, IDLE_BLINK_DELAY);
+      idleDvdTimer = setTimeout(startDvdBounce, IDLE_DVD_DELAY);
+    }
+
+    ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'].forEach(evt =>
+      window.addEventListener(evt, resetIdle, { passive: true })
+    );
+    resetIdle();
   </script>
 
 </body>
