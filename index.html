@@ -224,6 +224,14 @@
     position: relative;
     filter: drop-shadow(0 10px 14px rgba(0,0,0,0.28));
     flex-shrink: 0;
+    /* spin on hover, spin back on unhover */
+    transition: transform 0.8s ease;
+    transform-origin: 50% 50%;
+    cursor: pointer;
+  }
+  .bot-icon:hover{ transform: rotate(360deg); }
+  @media (prefers-reduced-motion: reduce){
+    .bot-icon{ transition: none; }
   }
 
   .bot-icon .antenna{
