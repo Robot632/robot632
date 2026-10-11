@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Robot632</title>
+<meta name="description" content="Robot632 - a small personal website.">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <script>
   // Runs before paint so the page never flashes the wrong theme.
   (function(){
@@ -1130,5 +1132,14 @@
     resetIdle();
   </script>
 
+<style>
+  /* legal/accessibility additions */
+  :focus-visible{ outline:3px solid #ffd54a; outline-offset:3px; }
+  .legal-link{ position:fixed; bottom:6px; left:50%; transform:translateX(-50%); z-index:5;
+    font:12px/1 system-ui,-apple-system,'Segoe UI',sans-serif; padding:6px 12px; border-radius:999px;
+    background:rgba(0,0,0,0.72); color:#fff; text-decoration:none; white-space:nowrap; }
+  .legal-link:hover{ text-decoration:underline; }
+</style>
+<a class="legal-link" href="privacy.html">Privacy &amp; terms</a>
 </body>
 </html>
