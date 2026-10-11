@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Robot632 // R632-SH</title>
+<meta name="description" content="R632-SH - Robot632's retro terminal.">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -180,6 +182,8 @@
     line-height:1.35;
     text-shadow: 0 0 6px var(--accent-dim), 0 0 1px var(--accent);
     cursor:text;
+    user-select:text;
+    -webkit-user-select:text;
   }
   .screen::-webkit-scrollbar{ width:8px; }
   .screen::-webkit-scrollbar-thumb{ background: var(--accent-dim); border-radius:4px; }
@@ -323,7 +327,7 @@
       <div id="log"></div>
       <div class="row" id="inputLine" style="display:none;">
         <span class="prompt" id="promptLabel">guest@robot632:~$</span>
-        <input id="cmdInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <input id="cmdInput" aria-label="Terminal command" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
       </div>
     </div>
   </div>
@@ -391,9 +395,10 @@
         'purchased: 31 July 2026',
         'arrived: 25 August 2026',
         '::img::toast-rebuild-ios6.png',
-		'not made by me! this is the name of cfw that i will put on my vector!',
+		'image not made by me! it was made by Toastito (toastito.co.uk). this is the name of cfw that i will put on my vector!',
 		'::img::DDL Vector 2.0 Box_2.jpeg',
 		'::img::DDL Vector 2.0 Box_1.jpeg',
+		'::dim::Vector 2.0 and its packaging belong to Digital Dream Labs (anki.bot). i am not affiliated with them.',
 		'it came!'
       ];
     },
@@ -760,7 +765,26 @@
     }
   });
 
-  screen.addEventListener('click', () => input.focus());
+  // Click-to-focus, but never while the user is selecting text:
+  // focusing the input would wipe their selection the moment they
+  // release the mouse. A plain click (nothing selected) still focuses.
+  screen.addEventListener('click', () => {
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed && screen.contains(sel.anchorNode)) return;
+    input.focus({ preventScroll: true });
+  });
+
+  // If focus drifted off the input (e.g. after selecting text), the
+  // next typed key sends focus back so typing still just works.
+  document.addEventListener('keydown', (e) => {
+    if (document.getElementById('inputLine').style.display === 'none') return;
+    const a = document.activeElement;
+    if (a !== document.body && a !== screen) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;   // keep Ctrl+C etc. working
+    if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter'){
+      input.focus({ preventScroll: true });
+    }
+  });
 
   // -----------------------------------------------------------
   // Pre-boot splash -- the machine sits idle showing "ROBOT II
@@ -794,5 +818,14 @@
   }
 </script>
 
+<style>
+  /* legal/accessibility additions */
+  :focus-visible{ outline:3px solid #ffd54a; outline-offset:3px; }
+  .legal-link{ position:fixed; bottom:6px; left:50%; transform:translateX(-50%); z-index:5;
+    font:12px/1 system-ui,-apple-system,'Segoe UI',sans-serif; padding:6px 12px; border-radius:999px;
+    background:rgba(0,0,0,0.72); color:#fff; text-decoration:none; white-space:nowrap; }
+  .legal-link:hover{ text-decoration:underline; }
+</style>
+<a class="legal-link" href="privacy.html">Privacy &amp; terms</a>
 </body>
 </html>
