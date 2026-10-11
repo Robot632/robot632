@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Robot632 // Signal Sequence</title>
+<meta name="description" content="Robot632 Signal Sequence - a small memory game.">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <script>
   (function(){
     var saved = localStorage.getItem('robot632_theme');
@@ -625,7 +627,7 @@
 
   function renderBoard(){
     board.innerHTML = PADS.map(p => `
-      <button class="pad" style="--pad-color:${p.color}" data-id="${p.id}" disabled></button>
+      <button class="pad" style="--pad-color:${p.color}" data-id="${p.id}" aria-label="Pad ${p.id+1}" disabled></button>
     `).join('');
   }
   renderBoard();
@@ -850,5 +852,14 @@
   });
 </script>
 
+<style>
+  /* legal/accessibility additions */
+  :focus-visible{ outline:3px solid #ffd54a; outline-offset:3px; }
+  .legal-link{ position:fixed; bottom:6px; left:50%; transform:translateX(-50%); z-index:5;
+    font:12px/1 system-ui,-apple-system,'Segoe UI',sans-serif; padding:6px 12px; border-radius:999px;
+    background:rgba(0,0,0,0.72); color:#fff; text-decoration:none; white-space:nowrap; }
+  .legal-link:hover{ text-decoration:underline; }
+</style>
+<a class="legal-link" href="privacy.html">Privacy &amp; terms</a>
 </body>
 </html>
