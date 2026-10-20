@@ -1,0 +1,49 @@
+# Refreshes roblox-stats.json (visits, favorites, players, dates,
+# group members) for roblox.html. Roblox's APIs can't be read from
+# visitors' browsers, so GitHub fetches them instead: every hour,
+# right after roblox.html or the script changes, or by hand from the
+# Actions tab ("Run workflow").
+name: Roblox stats
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - roblox.html
+      - scripts/roblox-stats.mjs
+      - .github/workflows/roblox-stats.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: roblox-stats
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch stats from Roblox
+        run: node scripts/roblox-stats.mjs
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- roblox-stats.json && git ls-files --error-unmatch roblox-stats.json >/dev/null 2>&1; then
+            echo "No changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add roblox-stats.json
+          git commit -m "Update Roblox stats"
+          git push

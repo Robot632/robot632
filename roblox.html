@@ -389,6 +389,8 @@
   .total b{ display:block; font-size: 24px; font-weight:800; line-height:1.1; }
   .total span{ font-size:11px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; opacity:0.75; }
 
+  .stats-age{ margin:-20px 0 0; font-size:12px; font-weight:700; opacity:0.7; min-height:1em; }
+
   /* ---- group goal ---- */
   .group-goal{
     display:flex;
@@ -548,13 +550,14 @@
         <span>R</span><span>o</span><span>b</span><span>l</span><span>o</span><span>x</span>
       </h1>
     </div>
-    <p class="subtitle">games i've built and the group behind some of them, with live stats pulled straight from Roblox</p>
+    <p class="subtitle">games i've built and the group behind some of them, with stats pulled from Roblox every hour</p>
 
     <div class="totals" aria-label="All games together">
       <div class="total"><b id="total-visits">–</b><span>total visits</span></div>
-      <div class="total"><b id="total-playing">–</b><span>playing now</span></div>
+      <div class="total"><b id="total-playing">–</b><span>playing</span></div>
       <div class="total"><b id="total-games">–</b><span>games</span></div>
     </div>
+    <p class="stats-age" id="stats-age"></p>
 
     <div class="section">
       <p class="section-label">Community</p>
@@ -778,17 +781,18 @@
     // place id and a few baked-in details (name, genre, thumbnail,
     // optional description / notes); the card itself is built here.
     //
-    // Live stats: resolve placeId -> universeId, then read visits,
-    // favorites, players, dates and description from Roblox's public
-    // game API. There is no made-up fallback: if Roblox can't be
-    // reached, the numbers show "–" until a later poll succeeds.
+    // Stats: Roblox's APIs can't be read from a visitor's browser (no
+    // CORS), so a GitHub Action fetches them every hour into
+    // roblox-stats.json on this same site (scripts/roblox-stats.mjs).
+    // The page reads that file. There is no made-up fallback: if the
+    // file is missing, the numbers show "–".
     // -----------------------------------------------------------
     const GROUP_ID = 537398362;
     const GOALS = [10, 25, 50, 100, 250, 500, 1000, 5000, 10000];
     const NO_DATA = '–';
     const listEl = document.getElementById('project-list');
     const cards = Array.from(listEl.querySelectorAll('.project-card'));
-    const live = new Map(); // card -> latest game data from Roblox
+    const live = new Map(); // card -> latest game data from roblox-stats.json
 
     const playUrl = (card) => `https://www.roblox.com/games/start?placeId=${card.dataset.placeId}`;
     const pageUrl = (card) => `https://www.roblox.com/games/${card.dataset.placeId}`;
@@ -861,28 +865,34 @@
       card.querySelector('.updated').textContent = updated ? `updated ${updated}` : '';
     }
 
-    // universeId rarely changes for a given place, so resolve it once
-    // per card and reuse it on every poll instead of re-looking it up.
-    async function resolveUniverseId(card){
-      if (card.dataset.universeId) return card.dataset.universeId;
-      const uRes = await fetch(`https://apis.roblox.com/universes/v1/places/${card.dataset.placeId}/universe`);
-      if (!uRes.ok) throw new Error('universe lookup failed');
-      const { universeId } = await uRes.json();
-      card.dataset.universeId = universeId;
-      return universeId;
+    let fetchedAt = null;
+
+    async function loadStats(){
+      try{
+        const res = await fetch('roblox-stats.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error('no stats file yet');
+        const stats = await res.json();
+        fetchedAt = stats.fetchedAt ? new Date(stats.fetchedAt) : null;
+        cards.forEach(card => {
+          const data = stats.games && stats.games[card.dataset.placeId];
+          if (data) live.set(card, data);
+        });
+        paintGroup(stats.group);
+      }catch(err){
+        // keep whatever was shown; with nothing loaded yet, cards show "–"
+      }
+      cards.forEach(paintCard);
+      paintAge();
     }
 
-    async function loadCard(card){
-      try{
-        const universeId = await resolveUniverseId(card);
-        const gameRes = await fetch(`https://games.roblox.com/v1/games?universeIds=${universeId}`);
-        if (!gameRes.ok) throw new Error('game data failed');
-        const data = (await gameRes.json()).data[0];
-        if (data) live.set(card, data);
-      }catch(err){
-        // keep the last good data, if any; otherwise the card shows "–"
-      }
-      paintCard(card);
+    // "stats from 12 min ago" under the totals
+    function paintAge(){
+      const el = document.getElementById('stats-age');
+      if (!fetchedAt || isNaN(fetchedAt)){ el.textContent = ''; return; }
+      const min = Math.max(0, Math.round((Date.now() - fetchedAt) / 60000));
+      const ago = min < 1 ? 'just now' : min < 60 ? `${min} min ago`
+                : min < 1440 ? `${Math.round(min / 60)} h ago` : `${Math.round(min / 1440)} days ago`;
+      el.textContent = `stats from Roblox, updated ${ago}`;
     }
 
     // ---------- totals (all games added up, counting up) ----------
@@ -913,23 +923,17 @@
     }
 
     // ---------- group + member goal ----------
-    async function loadGroup(){
-      const el = document.getElementById('group-members');
-      try{
-        const res = await fetch(`https://groups.roblox.com/v1/groups/${GROUP_ID}`);
-        if (!res.ok) throw new Error('group fetch failed');
-        const { memberCount } = await res.json();
-        el.textContent = `${formatNum(memberCount)} Members · Founded 2025`;
-        const goal = GOALS.find(g => g > memberCount) || memberCount;
-        document.getElementById('goal-fill').style.width = `${Math.min(100, (memberCount / goal) * 100)}%`;
-        const bar = document.getElementById('goal-bar');
-        bar.setAttribute('aria-valuemax', goal);
-        bar.setAttribute('aria-valuenow', memberCount);
-        document.getElementById('goal-text').textContent = `${memberCount} / ${goal} members`;
-        document.getElementById('group-goal').hidden = false;
-      }catch(err){
-        // no member count without Roblox: the card just says "Founded 2025"
-      }
+    function paintGroup(group){
+      if (!group || typeof group.memberCount !== 'number') return; // card just says "Founded 2025"
+      const memberCount = group.memberCount;
+      document.getElementById('group-members').textContent = `${formatNum(memberCount)} Members · Founded 2025`;
+      const goal = GOALS.find(g => g > memberCount) || memberCount;
+      document.getElementById('goal-fill').style.width = `${Math.min(100, (memberCount / goal) * 100)}%`;
+      const bar = document.getElementById('goal-bar');
+      bar.setAttribute('aria-valuemax', goal);
+      bar.setAttribute('aria-valuenow', memberCount);
+      document.getElementById('goal-text').textContent = `${memberCount} / ${goal} members`;
+      document.getElementById('group-goal').hidden = false;
     }
 
     // ---------- sorting ----------
@@ -1006,15 +1010,17 @@
     document.getElementById('dlg-page').addEventListener('click', playedTrophy);
 
     async function refreshAll(){
-      await Promise.all([...cards.map(loadCard), loadGroup()]);
+      await loadStats();
       paintTotals();
       if (sortSelect.value !== 'default') applySort();
       if (dialog.open && dialogCard) fillDetails(dialogCard);
     }
 
-    const POLL_MS = 15000;
+    // the file only changes about once an hour; check every few minutes
+    const POLL_MS = 5 * 60 * 1000;
     refreshAll();
     setInterval(refreshAll, POLL_MS);
+    setInterval(paintAge, 60 * 1000);
 
     // Catch up immediately when the tab regains focus, so you're not
     // staring at numbers that went stale while it was in the background.
