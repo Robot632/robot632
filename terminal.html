@@ -6,6 +6,7 @@
 <title>Robot632 // R632-SH</title>
 <meta name="description" content="R632-SH - Robot632's retro terminal.">
 <meta name="referrer" content="strict-origin-when-cross-origin">
+<script src="achievements.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -298,6 +299,33 @@
     color: var(--accent-bright);
     animation: splash-blink 1.1s steps(1) infinite;
   }
+  /* sudo rm -rf / */
+  @keyframes crt-crash{
+    0%, 100%{ translate: 0 0; filter: none; }
+    20%{ translate: -6px 3px; filter: hue-rotate(80deg) saturate(2); }
+    40%{ translate: 5px -4px; }
+    60%{ translate: -3px -2px; filter: invert(1); }
+    80%{ translate: 4px 2px; }
+  }
+  .crt.crashing{ animation: crt-crash 0.18s steps(2) infinite; }
+  @media (prefers-reduced-motion: reduce){
+    .crt.crashing{ animation:none; filter: hue-rotate(80deg); }
+  }
+
+  /* matrix */
+  .matrix-rain{
+    position:absolute;
+    left:0;
+    right:0;
+    top:34px;
+    bottom:0;
+    width:100%;
+    height:calc(100% - 34px);
+    z-index:4;
+    background:#000;
+    cursor:pointer;
+  }
+
   @keyframes splash-blink{
     0%, 49% { opacity: 1; }
     50%, 100% { opacity: 0; }
@@ -420,7 +448,10 @@
         '',
         'also: three old apple bricks live in a drawer here.',
         "type what you'd call them, together, and see what's inside.",
-		'also: an internet joke and it has 4 letters also starts with m and end with e'
+		'also: an internet joke and it has 4 letters also starts with m and end with e',
+        '',
+        'psst: a few classic unix jokes work here too. sudo knows what i mean.',
+        "and pip, games and trophies do what you'd expect."
       ];
     },
 	meme(){
@@ -434,6 +465,7 @@
         '├── index.html      -- home',
         '├── roblox.html     -- roblox stuff',
         '├── terminal.html   -- you are here',
+        '├── achievements.html -- your trophies',
         '└── walle.html      -- ??? (find the corner)',
         '',
         "there's no guarantee this tree is complete."
@@ -654,9 +686,225 @@
     print('');
     document.getElementById('inputLine').style.display = 'flex';
     document.getElementById('cmdInput').focus();
+    if (window.R632Ach) R632Ach.unlock('terminal');
   }
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  // -----------------------------------------------------------
+  // Secret commands. Not listed by `hints` on purpose -- hints
+  // only says some classic unix jokes work. Async ones return a
+  // Promise; runCommand() hides the prompt until it resolves.
+  // Each one also unlocks its trophy (achievements.js).
+  // -----------------------------------------------------------
+  function trophy(id){
+    if (window.R632Ach) R632Ach.unlock(id);
+  }
+
+  // prints a line that can be rewritten in place (progress bars)
+  function liveLine(text){
+    const el = lineEl(text);
+    log.appendChild(el);
+    screen.scrollTop = screen.scrollHeight;
+    return el;
+  }
+
+  async function crashSequence(){
+    const crt = document.getElementById('crt');
+    print('[sudo] password for guest: ********');
+    await sleep(500);
+    const victims = ['/index.html', '/roblox.html', '/walle.html', '/terminal.html', '/pip/feelings.txt',
+                     '/robot632/personality.dll', '/robot632/snacks/', '/usr/bin/beep', '/boot/antenna.cfg'];
+    for (const v of victims){
+      print(`::err::removing ${v}`);
+      await sleep(90);
+    }
+    crt.classList.add('crashing');
+    print('::err::KERNEL PANIC: personality not found');
+    await sleep(900);
+    log.style.visibility = 'hidden';
+    await sleep(1100);
+    crt.classList.remove('crashing');
+    log.style.visibility = '';
+    print('');
+    print('::dim::rebooting...');
+    await sleep(600);
+    print('just kidding. nothing was deleted. this is a static website, there is nothing to delete :)');
+    trophy('sudo');
+  }
+
+  async function hackSequence(target){
+    const host = (target || 'nasa').toLowerCase().replace(/[^a-z0-9.-]/g, '') || 'nasa';
+    const domain = host.includes('.') ? host : host + '.gov';
+    const steps = [
+      `connecting to mainframe.${domain} ...`,
+      'bypassing firewall',
+      'decrypting passwords (they were all "password123")',
+      'downloading moon_landing_real_footage.mp4'
+    ];
+    for (const step of steps){
+      const el = liveLine(step);
+      for (let p = 0; p <= 10; p++){
+        el.textContent = `${step}  [${'#'.repeat(p)}${'-'.repeat(10 - p)}] ${p * 10}%`;
+        await sleep(55 + Math.random() * 70);
+      }
+    }
+    print('::accent::ACCESS GRANTED');
+    await sleep(500);
+    print("...to absolutely nothing. it's a website about a robot. please don't hack nasa.");
+    trophy('hacker');
+  }
+
+  function matrixRain(){
+    return new Promise(resolve => {
+      const crt = document.getElementById('crt');
+      const c = document.createElement('canvas');
+      c.className = 'matrix-rain';
+      crt.appendChild(c);
+      const ctx = c.getContext('2d');
+      const color = getComputedStyle(crt).color;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const w = c.clientWidth, h = c.clientHeight;
+      c.width = w * dpr; c.height = h * dpr;
+      ctx.scale(dpr, dpr);
+      const SIZE = 16;
+      const cols = Math.ceil(w / SIZE);
+      const drops = Array.from({ length: cols }, () => Math.random() * -40);
+      const CHARS = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ0123456789ROBOT632';
+      let raf, done = false;
+      const started = performance.now();
+
+      function finish(){
+        if (done) return;
+        done = true;
+        cancelAnimationFrame(raf);
+        document.removeEventListener('keydown', finish);
+        c.removeEventListener('pointerdown', finish);
+        c.remove();
+        print('wake up, guest... the robot has you.');
+        trophy('matrix');
+        resolve();
+      }
+
+      function frame(now){
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        ctx.fillRect(0, 0, w, h);
+        ctx.font = `${SIZE}px VT323, monospace`;
+        for (let i = 0; i < cols; i++){
+          const y = drops[i] * SIZE;
+          ctx.fillStyle = Math.random() < 0.08 ? '#ffffff' : color;
+          ctx.fillText(CHARS[Math.floor(Math.random() * CHARS.length)], i * SIZE, y);
+          drops[i] = y > h && Math.random() > 0.97 ? 0 : drops[i] + 0.5;
+        }
+        if (now - started > 7000) return finish();
+        raf = requestAnimationFrame(frame);
+      }
+      // any key or tap ends it early (after a moment, so the Enter
+      // that started it doesn't instantly stop it)
+      setTimeout(() => {
+        document.addEventListener('keydown', finish);
+        c.addEventListener('pointerdown', finish);
+      }, 300);
+      raf = requestAnimationFrame(frame);
+    });
+  }
+
+  const FORTUNES = [
+    'a bolt in the hand is worth two in the snack drawer.',
+    'you will soon reboot. it will fix everything.',
+    'the corner you are looking for is closer than you think.',
+    'today is a good day to oil your joints.',
+    'beware of red-eyed robots in hatches.',
+    'your next high score is hiding behind your next attempt.',
+    'someone, somewhere, is still running ios 6. respect them.',
+    'error 404: bad luck not found.',
+    'do not feed the robot after midnight. it is asleep anyway.'
+  ];
+
+  function cowsay(text){
+    const msg = (text || 'moo. i am a robot cow.').slice(0, 120);
+    // wrap to 36 columns
+    const words = msg.split(/\s+/);
+    const rows = [];
+    let cur = '';
+    words.forEach(wd => {
+      if ((cur + ' ' + wd).trim().length > 36){ rows.push(cur.trim()); cur = wd; }
+      else cur += ' ' + wd;
+    });
+    if (cur.trim()) rows.push(cur.trim());
+    const width = Math.max(...rows.map(r => r.length));
+    const out = [' ' + '_'.repeat(width + 2)];
+    rows.forEach((r, i) => {
+      const [l, rr] = rows.length === 1 ? ['<', '>'] : i === 0 ? ['/', '\\'] : i === rows.length - 1 ? ['\\', '/'] : ['|', '|'];
+      out.push(`${l} ${r.padEnd(width)} ${rr}`);
+    });
+    out.push(' ' + '-'.repeat(width + 2));
+    out.push(
+      '        \\   ^__^',
+      '         \\  (oo)\\_______',
+      '            (__)\\       )\\/\\',
+      '                ||----w |',
+      '                ||     ||'
+    );
+    return out.map(l => '::banner-line::' + l);
+  }
+
+  Object.assign(COMMANDS, {
+    sudo(arg){
+      if (/^rm\s+-(rf|fr)\s+\/\*?$/.test(arg.trim())) return crashSequence();
+      return [`::err::guest is not in the sudoers file. this incident will be reported.`];
+    },
+    hack(arg){ return hackSequence(arg); },
+    matrix(){ return matrixRain(); },
+    fortune(){
+      trophy('fortune');
+      return ['::accent::' + FORTUNES[Math.floor(Math.random() * FORTUNES.length)]];
+    },
+    cowsay(arg){
+      trophy('cowsay');
+      return cowsay(arg);
+    },
+    games(){
+      print('opening the arcade...');
+      return sleep(600).then(() => { window.location.href = 'walle.html#arcade'; });
+    },
+    pip(){
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem('robot632_pet')); } catch (e){}
+      if (!saved || typeof saved.fuel !== 'number'){
+        return ["pip hasn't been switched on yet.", '::dim::turn on High graphics on the home page to meet it.'];
+      }
+      const fuel = Math.max(0, Math.min(100, saved.fuel - (Date.now() - saved.t) / (6 * 60 * 1000)));
+      const eaten = saved.eaten || 0;
+      const look = eaten >= 100 ? 'royal (gold + crown)' : eaten >= 50 ? 'chrome paint job' : eaten >= 10 ? 'red cap' : 'factory default';
+      const bars = Math.round(fuel / 10);
+      return [
+        '::banner-line::   ( o)( o)',
+        '::banner-line::      ||',
+        '::banner-line::   [=PIP=]',
+        '::banner-line::  (@@@@@@@)',
+        '',
+        `fuel   [${'#'.repeat(bars)}${'-'.repeat(10 - bars)}] ${Math.round(fuel)}%`,
+        `bolts  ${eaten} eaten`,
+        `look   ${look}`,
+        fuel < 25 ? "::err::pip is hungry! go drop it a bolt on the home page." : '::dim::pip is doing fine.'
+      ];
+    },
+    trophies(){
+      if (!window.R632Ach) return ['::err::trophy system offline.'];
+      const got = R632Ach.unlocked();
+      const n = R632Ach.LIST.filter(a => got[a.id]).length;
+      const lines = [`TROPHIES  ${n}/${R632Ach.LIST.length}`];
+      R632Ach.LIST.forEach(a => {
+        const has = !!got[a.id];
+        if (a.secret && !has) lines.push('::dim::  [ ] ???');
+        else lines.push((has ? '  [x] ' : '::dim::  [ ] ') + a.title + ' -- ' + a.desc);
+      });
+      lines.push('::dim::full list: achievements.html');
+      return lines;
+    }
+  });
+  COMMANDS.achievements = COMMANDS.trophies;
 
   // -----------------------------------------------------------
   // Input handling
@@ -682,6 +930,17 @@
       return;
     }
     const result = handler(arg);
+    if (result && typeof result.then === 'function'){
+      // animated command: hide the prompt until it's done
+      const inputLine = document.getElementById('inputLine');
+      inputLine.style.display = 'none';
+      result.then(() => {
+        inputLine.style.display = 'flex';
+        input.focus({ preventScroll: true });
+        screen.scrollTop = screen.scrollHeight;
+      });
+      return;
+    }
     if (typeof result === 'string') print(result);
     else if (Array.isArray(result)) printLines(result);
   }

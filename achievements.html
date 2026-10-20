@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot632 · Trophies</title>
+<meta name="description" content="Robot632 - trophies you've unlocked around the site.">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script>
+  (function(){
+    var saved = null;
+    try { saved = localStorage.getItem('robot632_theme'); } catch(e){}
+    var preferred = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.documentElement.dataset.theme = preferred;
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Bangers&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='8' r='8' fill='%23e4e7eb'/><rect x='46' y='6' width='8' height='20' fill='%23e4e7eb'/><rect x='8' y='22' width='84' height='78' rx='15' fill='%23e4e7eb'/><rect x='20' y='46' width='60' height='28' rx='9' fill='%232c2f34'/><circle cx='38' cy='60' r='6.5' fill='%23e4e7eb'/><circle cx='62' cy='60' r='6.5' fill='%23e4e7eb'/></svg>">
+<style>
+  /* same surface palette as index.html */
+  :root{
+    --bg: #007a7a;
+    --bg-deep: #005f5f;
+    --text: #ffffff;
+    --text-shadow: rgba(0,0,0,0.18);
+    --panel-bg: rgba(0,0,0,0.14);
+    --panel-border: rgba(255,255,255,0.18);
+    --panel-line: rgba(255,255,255,0.14);
+    --grid-line: rgba(255,255,255,0.06);
+    --card-bg: rgba(0,0,0,0.18);
+    --gold: #ffd65a;
+  }
+  html[data-theme="light"]{
+    --bg: #eafaf6;
+    --bg-deep: #ffffff;
+    --text: #08403f;
+    --text-shadow: rgba(0,0,0,0.08);
+    --panel-bg: rgba(255,255,255,0.55);
+    --panel-border: rgba(0,90,90,0.15);
+    --panel-line: rgba(0,90,90,0.12);
+    --grid-line: rgba(0,90,90,0.10);
+    --card-bg: rgba(255,255,255,0.7);
+    --gold: #b98300;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    min-height:100dvh;
+    background: radial-gradient(circle at 50% -10%, var(--bg-deep), var(--bg) 55%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    display:flex;
+    justify-content:center;
+    padding: 14px 14px 48px;
+  }
+  body::before{
+    content:'';
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 34px 34px;
+  }
+
+  .panel{
+    position:relative;
+    width:100%;
+    max-width: 760px;
+    background: var(--panel-bg);
+    border: 2px solid var(--panel-border);
+    border-radius: 24px;
+    padding: 24px clamp(14px, 4vw, 28px) 28px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.25);
+  }
+
+  .back{
+    position:absolute;
+    top:18px;
+    left:20px;
+    color: var(--text);
+    font-weight:800;
+    font-size:14px;
+    text-decoration:none;
+    opacity:0.8;
+  }
+  .back:hover{ opacity:1; text-decoration:underline; }
+
+  h1{
+    font-family:'Bangers', cursive;
+    font-weight:400;
+    font-size: clamp(36px, 9vw, 52px);
+    letter-spacing:0.04em;
+    text-align:center;
+    margin: 18px 0 4px;
+    text-shadow: 0 2px 6px var(--text-shadow);
+  }
+
+  .summary{
+    text-align:center;
+    font-weight:800;
+    margin:0 0 10px;
+  }
+  .bar{
+    height:10px;
+    max-width:360px;
+    margin: 0 auto 22px;
+    border-radius:6px;
+    background: var(--card-bg);
+    border:1px solid var(--panel-line);
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    width:0;
+    border-radius:6px;
+    background: linear-gradient(90deg, #ff8a3d, var(--gold));
+  }
+
+  .grid{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap:12px;
+  }
+  .card{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    padding:12px 14px;
+    border-radius:16px;
+    background: var(--card-bg);
+    border:1px solid var(--panel-line);
+  }
+  .card.got{
+    border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--gold) 22%, transparent);
+  }
+  .card-icon{
+    font-size:28px;
+    line-height:1;
+    width:34px;
+    text-align:center;
+    flex-shrink:0;
+  }
+  .card:not(.got) .card-icon{ filter: grayscale(1); opacity:0.4; }
+  .card-title{ font-weight:800; font-size:15px; margin:0 0 2px; }
+  .card-desc{ font-weight:700; font-size:13px; opacity:0.8; margin:0; line-height:1.35; }
+  .card-date{ font-weight:700; font-size:11px; color: var(--gold); margin:4px 0 0; }
+
+  :focus-visible{ outline:3px solid #ffd54a; outline-offset:3px; }
+  .legal-link{ position:fixed; bottom:6px; left:50%; transform:translateX(-50%); z-index:5;
+    font:12px/1 system-ui,-apple-system,'Segoe UI',sans-serif; padding:6px 12px; border-radius:999px;
+    background:rgba(0,0,0,0.72); color:#fff; text-decoration:none; white-space:nowrap; }
+  .legal-link:hover{ text-decoration:underline; }
+</style>
+<script src="achievements.js"></script>
+</head>
+<body>
+  <main class="panel">
+    <a class="back" href="index.html">&larr; home</a>
+    <h1>Trophies</h1>
+    <p class="summary" id="summary"></p>
+    <div class="bar" aria-hidden="true"><div class="bar-fill" id="bar-fill"></div></div>
+    <ul class="grid" id="grid"></ul>
+  </main>
+
+  <script>
+    // Renders R632Ach.LIST: unlocked trophies show their date,
+    // locked secret ones stay "???" until found.
+    (function(){
+      const got = R632Ach.unlocked();
+      const list = R632Ach.LIST;
+      const count = list.filter(a => got[a.id]).length;
+
+      document.getElementById('summary').textContent = `${count} / ${list.length} unlocked`;
+      document.getElementById('bar-fill').style.width = `${(count / list.length) * 100}%`;
+
+      const grid = document.getElementById('grid');
+      list.forEach(a => {
+        const unlocked = !!got[a.id];
+        const hidden = a.secret && !unlocked;
+        const li = document.createElement('li');
+        li.className = 'card' + (unlocked ? ' got' : '');
+        li.innerHTML = `
+          <span class="card-icon" aria-hidden="true"></span>
+          <div>
+            <p class="card-title"></p>
+            <p class="card-desc"></p>
+            ${unlocked ? '<p class="card-date"></p>' : ''}
+          </div>
+        `;
+        li.querySelector('.card-icon').textContent = hidden ? '❔' : a.icon;
+        li.querySelector('.card-title').textContent = hidden ? '???' : a.title;
+        li.querySelector('.card-desc').textContent = hidden ? 'A secret. Keep exploring.' : a.desc;
+        if (unlocked){
+          li.querySelector('.card-date').textContent = 'unlocked ' + new Date(got[a.id]).toLocaleDateString();
+        }
+        li.setAttribute('aria-label', `${hidden ? 'Secret trophy' : a.title}, ${unlocked ? 'unlocked' : 'locked'}`);
+        grid.appendChild(li);
+      });
+    })();
+  </script>
+
+  <a class="legal-link" href="privacy.html">Privacy &amp; terms</a>
+</body>
+</html>
