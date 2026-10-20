@@ -12,13 +12,31 @@
     var saved = localStorage.getItem('robot632_theme');
     var preferred = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     document.documentElement.dataset.theme = preferred;
-    // same idea for the graphics setting: "low" (the classic page)
-    // unless the visitor picked "high" or "ultra" in settings before.
+    // Graphics: whatever the visitor picked in settings wins. With no
+    // pick yet, the page chooses for them (data-graphics-auto) --
+    // Low on weaker devices so it stays smooth, High on capable ones.
+    // A device that was auto-put on High but couldn't keep up gets
+    // remembered as Low (robot632_graphics_auto, see the frame-rate
+    // check further down). Ultra is only ever picked by hand.
     // Ultra is High plus extras, so it sets data-graphics="high" too
     // and adds data-ultra on top.
+    var root = document.documentElement;
     var g = localStorage.getItem('robot632_graphics');
-    document.documentElement.dataset.graphics = (g === 'high' || g === 'ultra') ? 'high' : 'low';
-    if (g === 'ultra') document.documentElement.dataset.ultra = 'true';
+    if (g !== 'low' && g !== 'high' && g !== 'ultra'){
+      root.dataset.graphicsAuto = 'true';
+      g = localStorage.getItem('robot632_graphics_auto');
+      if (g !== 'low'){
+        var nav = navigator;
+        var weak =
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+          (nav.connection && nav.connection.saveData) ||
+          (nav.deviceMemory && nav.deviceMemory < 4) ||
+          (nav.hardwareConcurrency && nav.hardwareConcurrency < 4);
+        g = weak ? 'low' : 'high';
+      }
+    }
+    root.dataset.graphics = (g === 'high' || g === 'ultra') ? 'high' : 'low';
+    if (g === 'ultra') root.dataset.ultra = 'true';
   })();
 </script>
 <script src="achievements.js"></script>
@@ -1547,6 +1565,7 @@
     function applyGraphics(mode){
       const root = document.documentElement;
       const was = getGraphics();
+      delete root.dataset.graphicsAuto; // a hand-picked setting replaces the automatic one
       root.dataset.graphics = mode === 'low' ? 'low' : 'high';
       if (mode === 'ultra') root.dataset.ultra = 'true'; else delete root.dataset.ultra;
       localStorage.setItem(GRAPHICS_KEY, mode);
@@ -1571,7 +1590,8 @@
         b.setAttribute('aria-checked', on ? 'true' : 'false');
         b.tabIndex = on ? 0 : -1;
       });
-      document.getElementById('settings-note').textContent = GRAPHICS_NOTES[mode];
+      document.getElementById('settings-note').textContent = GRAPHICS_NOTES[mode] +
+        (document.documentElement.dataset.graphicsAuto === 'true' ? ' (Picked automatically for this device.)' : '');
       if (window.R632Ach){
         const got = R632Ach.unlocked();
         const n = R632Ach.LIST.filter(a => got[a.id]).length;
@@ -2602,6 +2622,36 @@
 
     if (getGraphics() !== 'low') HighGfx.start();
     if (getGraphics() === 'ultra') Ultra.start();
+
+    // -----------------------------------------------------------
+    // Frame-rate check for automatic High: watch a few seconds of
+    // frames (skipping the first, busy one); if the device averages
+    // under ~40 fps, drop to Low quietly and remember that for next
+    // time. Only for an automatic pick -- a hand-picked High stays.
+    // -----------------------------------------------------------
+    (function autoGraphicsCheck(){
+      const root = document.documentElement;
+      if (root.dataset.graphicsAuto !== 'true' || getGraphics() !== 'high') return;
+      const MIN_FPS = 40, SKIP_MS = 1000, SAMPLE_MS = 4000;
+      let start = null, frames = 0;
+      function frame(now){
+        if (root.dataset.graphicsAuto !== 'true') return; // picked by hand meanwhile
+        if (document.hidden){ requestAnimationFrame(frame); return; }
+        if (start === null) start = now;
+        const t = now - start;
+        if (t >= SKIP_MS) frames++;
+        if (t < SKIP_MS + SAMPLE_MS){ requestAnimationFrame(frame); return; }
+        const fps = frames / (SAMPLE_MS / 1000);
+        if (fps < MIN_FPS){
+          try { localStorage.setItem('robot632_graphics_auto', 'low'); } catch (e){}
+          root.dataset.graphics = 'low';
+          renderButtons();
+          HighGfx.stop();
+          if (!settingsPop.hidden) syncSettings();
+        }
+      }
+      requestAnimationFrame(frame);
+    })();
   </script>
 
 <style>

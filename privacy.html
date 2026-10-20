@@ -53,7 +53,8 @@
       <li><code>robot632_sound</code> &ndash; sound on or off</li>
       <li><code>robot632_tagline_index</code> &ndash; which tagline to show next</li>
       <li><code>robot632_visits</code> &ndash; the &ldquo;powered on X times&rdquo; counter (counted locally, not by me)</li>
-      <li><code>robot632_graphics</code> &ndash; Low, High or Ultra graphics</li>
+      <li><code>robot632_graphics</code> &ndash; Low, High or Ultra graphics, if you picked one</li>
+      <li><code>robot632_graphics_auto</code> &ndash; set to Low if your device was too slow for the automatic High graphics</li>
       <li><code>robot632_pet</code> &ndash; how full Pip the pet robot is, how many bolts it has eaten, and when you last checked on it</li>
       <li><code>robot632_best_flappy</code>, <code>robot632_best_snake</code>, <code>robot632_best_reflex</code>, <code>robot632_best_breakout</code>, <code>robot632_best_whack</code> &ndash; your best scores in the mini-games</li>
       <li><code>robot632_games_tab</code> &ndash; which game you picked last</li>
@@ -117,7 +118,7 @@
   document.getElementById('clear-btn').addEventListener('click', function(){
     var status = document.getElementById('clear-status');
     try {
-      ['robot632_theme','robot632_sound','robot632_tagline_index','robot632_visits','robot632_graphics','robot632_pet','robot632_best_flappy','robot632_best_snake','robot632_best_reflex','robot632_best_breakout','robot632_best_whack','robot632_games_tab','robot632_games_played','robot632_achievements'].forEach(function(k){ localStorage.removeItem(k); });
+      ['robot632_theme','robot632_sound','robot632_tagline_index','robot632_visits','robot632_graphics','robot632_graphics_auto','robot632_pet','robot632_best_flappy','robot632_best_snake','robot632_best_reflex','robot632_best_breakout','robot632_best_whack','robot632_games_tab','robot632_games_played','robot632_achievements'].forEach(function(k){ localStorage.removeItem(k); });
       status.textContent = 'Done. Saved settings removed from this device.';
     } catch(e){
       status.textContent = 'Could not access browser storage (nothing to clear).';
