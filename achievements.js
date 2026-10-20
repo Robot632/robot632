@@ -22,7 +22,6 @@
     { id: 'night_owl',      icon: '🦉', title: 'Night owl',               desc: 'Visit between midnight and 5 am.' },
     { id: 'early_bird',     icon: '🐦', title: 'Early bird',              desc: 'Visit between 5 and 7 am.' },
     { id: 'high_graphics',  icon: '✨', title: 'Eye candy',               desc: 'Turn on High graphics.' },
-    { id: 'ultra_graphics', icon: '🚀', title: 'Maximum overdrive',       desc: 'Turn on Ultra graphics.' },
     { id: 'holiday',        icon: '🎉', title: 'Festive bot',             desc: 'Visit on a holiday with High graphics on.' },
     { id: 'roblox',         icon: '🎮', title: 'Blocky',                  desc: 'Check out the Roblox page.' },
     { id: 'terminal',       icon: '⌨️', title: 'Hacker voice',            desc: 'Find the terminal.', secret: true },
