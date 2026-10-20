@@ -60,6 +60,7 @@
       <li><code>robot632_games_tab</code> &ndash; which game you picked last</li>
       <li><code>robot632_games_played</code> &ndash; which games you have opened (for a trophy)</li>
       <li><code>robot632_achievements</code> &ndash; which trophies you have unlocked, and when</li>
+      <li><code>robot632_debug_key</code> &ndash; only on the site owner's own devices: unlocks the owner's debug panel. Visitors never have it.</li>
     </ul>
     <p>Because these are strictly functional and never sent to me or to anyone else, no cookie banner is needed.</p>
     <p><strong>Delete your data:</strong> there is nothing stored on a server, so there is nothing for me to delete. You can remove the settings above from your device at any time:</p>
@@ -118,7 +119,7 @@
   document.getElementById('clear-btn').addEventListener('click', function(){
     var status = document.getElementById('clear-status');
     try {
-      ['robot632_theme','robot632_sound','robot632_tagline_index','robot632_visits','robot632_graphics','robot632_graphics_auto','robot632_pet','robot632_best_flappy','robot632_best_snake','robot632_best_reflex','robot632_best_breakout','robot632_best_whack','robot632_games_tab','robot632_games_played','robot632_achievements'].forEach(function(k){ localStorage.removeItem(k); });
+      ['robot632_theme','robot632_sound','robot632_tagline_index','robot632_visits','robot632_graphics','robot632_graphics_auto','robot632_pet','robot632_best_flappy','robot632_best_snake','robot632_best_reflex','robot632_best_breakout','robot632_best_whack','robot632_games_tab','robot632_games_played','robot632_achievements','robot632_debug_key'].forEach(function(k){ localStorage.removeItem(k); });
       status.textContent = 'Done. Saved settings removed from this device.';
     } catch(e){
       status.textContent = 'Could not access browser storage (nothing to clear).';
