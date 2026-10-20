@@ -181,10 +181,15 @@
     background: linear-gradient(180deg, #2c2f34, #45494f 60%, #575c63);
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
   }
+  /* tilts a little as it pops in, like it's peeking round the corner */
   .corner-trigger:hover .corner-face,
   .corner-trigger:focus-visible .corner-face{
     opacity:1;
-    transform: scale(1);
+    transform: scale(1) rotate(-12deg);
+  }
+  @media (prefers-reduced-motion: reduce){
+    .corner-trigger:hover .corner-face,
+    .corner-trigger:focus-visible .corner-face{ transform: scale(1); }
   }
   .corner-trigger:focus-visible{ outline:2px solid var(--text); outline-offset:4px; border-radius:10px; }
 
