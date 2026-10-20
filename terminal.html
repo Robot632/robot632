@@ -7,6 +7,7 @@
 <meta name="description" content="R632-SH - Robot632's retro terminal.">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <script src="achievements.js"></script>
+<script src="owner.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -701,6 +702,39 @@
     if (window.R632Ach) R632Ach.unlock(id);
   }
 
+  // one masked line of input for `debug`; never echoed or kept in
+  // history. Resolves with the text, or '' on Escape.
+  function askPassword(){
+    return new Promise(resolve => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const label = document.createElement('span');
+      label.className = 'prompt';
+      label.textContent = 'password:';
+      const pw = document.createElement('input');
+      pw.type = 'password';
+      pw.id = 'pwInput';
+      pw.autocomplete = 'off';
+      pw.setAttribute('aria-label', 'Debug password');
+      pw.style.cssText = 'flex:1;background:transparent;border:none;outline:none;color:inherit;font:inherit;caret-color:currentColor;';
+      row.appendChild(label);
+      row.appendChild(pw);
+      log.appendChild(row);
+      pw.focus();
+      pw.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== 'Escape') return;
+        e.preventDefault();
+        e.stopPropagation(); // Escape here must not leave the terminal
+        const value = e.key === 'Enter' ? pw.value : '';
+        pw.value = '';
+        pw.disabled = true;
+        label.textContent = 'password: ' + (value ? '********' : '');
+        pw.remove();
+        resolve(value);
+      });
+    });
+  }
+
   // prints a line that can be rewritten in place (progress bars)
   function liveLine(text){
     const el = lineEl(text);
@@ -863,6 +897,27 @@
     cowsay(arg){
       trophy('cowsay');
       return cowsay(arg);
+    },
+    debug(arg){
+      if (!window.R632Owner) return ['::err::debug unavailable.'];
+      if (arg.trim() === 'off'){
+        R632Owner.lock();
+        return ['debug panel removed from this device.'];
+      }
+      if (R632Owner.unlocked()){
+        print('this device is already unlocked. opening the home page...');
+        return sleep(700).then(() => { window.location.href = 'index.html'; });
+      }
+      return askPassword().then(async (pw) => {
+        if (!pw) return print('::dim::cancelled.');
+        print('::dim::checking...');
+        let ok = false;
+        try { ok = await R632Owner.unlock(pw); } catch (e){ ok = false; }
+        if (!ok){ print('::err::access denied.'); return; }
+        print('::accent::access granted. the debug panel is now on this device only.');
+        await sleep(900);
+        window.location.href = 'index.html';
+      });
     },
     games(){
       print('opening the arcade...');
