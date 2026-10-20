@@ -196,7 +196,13 @@
     background: radial-gradient(circle at 35% 30%, #fff, var(--bolt) 60%, rgba(0,0,0,0.3));
     box-shadow: 0 1px 2px rgba(0,0,0,0.35);
   }
-  .bolt.tl{ top:16px; left:18px; }
+  .bolt.tl{ top:16px; left:18px; transition: opacity 0.25s ease, transform 0.25s ease; }
+  /* the corner robot takes the top-left rivet's place while it shows */
+  .corner-trigger:hover + .bolt.tl,
+  .corner-trigger:focus-visible + .bolt.tl{
+    opacity:0;
+    transform: scale(0.4);
+  }
   .bolt.tr{ top:16px; right:18px; }
   .bolt.bl{ bottom:16px; left:18px; }
   .bolt.br{ bottom:16px; right:18px; }
@@ -659,7 +665,6 @@
        - the bot's eyes follow the pointer
        - Pip, a little pet robot that walks along the bottom of
          the panel and wants to be fed bolts
-       - a Games button (see BUTTONS)
   ------------------------------------------------------------ */
   /* the canvas sits inside the panel, behind its content: the
      panel becomes a stacking context (z-index:1), so z-index:-1
@@ -1321,7 +1326,6 @@
     // graphics: 'high' entries only render while High (or Ultra) is on.
     const BUTTONS = [
       { label: 'Roblox',  href: 'roblox.html', color: 'var(--roblox-red)', visible: true  },
-      { label: 'Games',   href: 'walle.html#arcade', color: 'var(--blue)',       visible: true, graphics: 'high' },
       { label: 'About',   href: '#',           color: 'var(--orange)',     visible: false },
       { label: 'Friends', href: '#',           color: 'var(--green)',      visible: false }
     ];
@@ -1545,14 +1549,14 @@
     // Graphics setting: Low (default) / High. Same single-key
     // localStorage pattern as theme and sound. The head script
     // already set data-graphics before paint; switching here flips
-    // the attribute, re-renders the buttons (Games is High-only)
+    // the attribute, re-renders the buttons (entries can be High-only)
     // and starts/stops the High extras (HighGfx, further down).
     // -----------------------------------------------------------
     const GRAPHICS_KEY = 'robot632_graphics';
     const GRAPHICS_MODES = ['low', 'high', 'ultra'];
     const GRAPHICS_NOTES = {
       low: 'The classic Robot632 look. Lightest on battery.',
-      high: 'A sky that follows your clock, holiday outfits, a sleepy (or caffeinated) robot, eyes that follow you, Pip the pet robot, and a Games button.',
+      high: 'A sky that follows your clock, holiday outfits, a sleepy (or caffeinated) robot, eyes that follow you, and Pip the pet robot.',
       ultra: 'Everything in High, plus 3D parallax that follows your mouse (or tilting your phone), extra glow and almost twice the particles.'
     };
 
