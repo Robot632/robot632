@@ -13,6 +13,7 @@
     document.documentElement.dataset.theme = preferred;
   })();
 </script>
+<script src="achievements.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Space+Mono:wght@400;700&family=Caveat:wght@700&family=Bangers&family=Permanent+Marker&family=Kalam:wght@700&family=Chewy&family=Rubik:wght@700&display=swap" rel="stylesheet">
@@ -509,6 +510,8 @@
       <button class="game-tab" role="tab" type="button" data-game="flappy">flappy</button>
       <button class="game-tab" role="tab" type="button" data-game="snake">snake</button>
       <button class="game-tab" role="tab" type="button" data-game="reflex">reflex</button>
+      <button class="game-tab" role="tab" type="button" data-game="breakout">breakout</button>
+      <button class="game-tab" role="tab" type="button" data-game="whack">whack</button>
     </div>
 
     <div class="game-view" id="view-signal">
@@ -873,6 +876,7 @@
   // 0.25s (the CSS transitions above are what do the work) and
   // just stays there -- no long drawn-out sequence.
   function triggerVictory(){
+    if (window.R632Ach) R632Ach.unlock('signal_win');
     accepting = false;
     stopRoundTimer();
     padEls.forEach(p => p.disabled = true);
@@ -1088,6 +1092,10 @@
       tone(freq, freq, duration, 0, type, volume * 3);
     }
 
+    function trophy(id){
+      if (window.R632Ach) R632Ach.unlock(id);
+    }
+
     // ---------- shared drawing helpers ----------
     function rrect(x, y, w, h, r){
       ctx.beginPath();
@@ -1203,6 +1211,7 @@
         beep(140, 0.3, 'sawtooth', 0.04);
         const best = getBest(KEY);
         if (best === null || s.score > best) setBest(KEY, s.score);
+        if (s.score >= 10) trophy('flappy_10');
         updateScore();
       }
 
@@ -1373,6 +1382,7 @@
         if (eating){
           s.score++;
           s.interval = Math.max(70, s.interval - 4);
+          if (s.score >= 20) trophy('snake_20');
           beep(880, 0.06, 'triangle', 0.04);
           updateScore();
           placeNut();
@@ -1463,6 +1473,7 @@
           s.state = 'result';
           const best = getBest(KEY);
           if (best === null || s.last < best) setBest(KEY, s.last);
+          if (s.last < 250) trophy('reflex_250');
           beep(1200, 0.05, 'triangle', 0.04);
           updateScore();
         } else {
@@ -1524,11 +1535,426 @@
     })();
 
     // ===========================================================
+    // Breakout: the robot is the paddle, the ball is a hex nut.
+    // Move with the pointer / finger or the arrow keys.
+    // ===========================================================
+    const Breakout = (() => {
+      const KEY = 'robot632_best_breakout';
+      const COLS = 6, ROWS = 5, TOP = 64, BH = 16, GAPX = 6, SIDE = 12;
+      const BW = (W - SIDE * 2 - GAPX * (COLS - 1)) / COLS;
+      const PW = 70, PH = 14, PY = H - 46, BR = 6;
+      const ROW_COLORS = ['#4be9ff', '#7d5aa6', '#a8ab48', '#a1433f', '#3f8f96'];
+      let s;
+
+      function buildWall(){
+        s.bricks = [];
+        for (let r = 0; r < ROWS; r++){
+          for (let c = 0; c < COLS; c++){
+            s.bricks.push({ x: SIDE + c * (BW + GAPX), y: TOP + r * (BH + GAPX), alive: true, color: ROW_COLORS[r] });
+          }
+        }
+      }
+
+      function reset(){
+        s = { state: 'ready', px: W / 2, held: 0, bx: W / 2, by: PY - BR - 1, vx: 0, vy: 0, speed: 4.2,
+              lives: 3, score: 0, wall: 1, overAt: 0, t: 0, spin: 0 };
+        buildWall();
+        updateScore();
+      }
+
+      function launch(){
+        s.state = 'play';
+        const a = (-0.25 - Math.random() * 0.5) * Math.PI / 2; // up and a bit sideways
+        s.vx = Math.sin(a) * s.speed * (Math.random() < 0.5 ? -1 : 1);
+        s.vy = -Math.cos(a) * s.speed;
+        beep(520, 0.05, 'square', 0.03);
+      }
+
+      function press(){
+        if (s.state === 'ready' || s.state === 'cleared' || s.state === 'lost') launch();
+        else if (s.state === 'over' && performance.now() - s.overAt > 450) reset();
+      }
+
+      function move(x){ s.px = x; }
+      function key(k, down){
+        if (k === 'ArrowLeft' || k === 'a') s.held = down ? -1 : (s.held === -1 ? 0 : s.held);
+        if (k === 'ArrowRight' || k === 'd') s.held = down ? 1 : (s.held === 1 ? 0 : s.held);
+      }
+
+      function finish(){
+        const best = getBest(KEY);
+        if (best === null || s.score > best) setBest(KEY, s.score);
+        updateScore();
+      }
+
+      function step(k){
+        s.bx += s.vx * k;
+        s.by += s.vy * k;
+        if (s.bx < BR){ s.bx = BR; s.vx = Math.abs(s.vx); }
+        if (s.bx > W - BR){ s.bx = W - BR; s.vx = -Math.abs(s.vx); }
+        if (s.by < BR){ s.by = BR; s.vy = Math.abs(s.vy); }
+
+        // paddle: the bounce angle depends on where the nut lands
+        if (s.vy > 0 && s.by + BR >= PY && s.by + BR <= PY + PH + 6 && Math.abs(s.bx - s.px) <= PW / 2 + BR){
+          const off = (s.bx - s.px) / (PW / 2 + BR); // -1..1
+          const a = off * 1.05;
+          s.vx = Math.sin(a) * s.speed;
+          s.vy = -Math.cos(a) * s.speed;
+          s.by = PY - BR;
+          beep(330, 0.04, 'triangle', 0.04);
+        }
+
+        for (const b of s.bricks){
+          if (!b.alive) continue;
+          if (s.bx + BR > b.x && s.bx - BR < b.x + BW && s.by + BR > b.y && s.by - BR < b.y + BH){
+            b.alive = false;
+            s.score += 10;
+            // bounce off whichever side it went in through the least
+            const overlapX = Math.min(s.bx + BR - b.x, b.x + BW - (s.bx - BR));
+            const overlapY = Math.min(s.by + BR - b.y, b.y + BH - (s.by - BR));
+            if (overlapX < overlapY) s.vx = -s.vx; else s.vy = -s.vy;
+            beep(700 + Math.random() * 300, 0.05, 'square', 0.025);
+            updateScore();
+            break;
+          }
+        }
+
+        if (s.bricks.every(b => !b.alive)){
+          s.state = 'cleared';
+          s.wall++;
+          s.speed = Math.min(7, s.speed + 0.5);
+          trophy('breakout_clear');
+          beep(880, 0.12, 'triangle', 0.05);
+          setTimeout(() => beep(1320, 0.14, 'triangle', 0.05), 120);
+          buildWall();
+          s.bx = s.px; s.by = PY - BR - 1;
+          return;
+        }
+
+        if (s.by > H + BR){
+          s.lives--;
+          beep(160, 0.25, 'sawtooth', 0.035);
+          if (s.lives <= 0){
+            s.state = 'over';
+            s.overAt = performance.now();
+            finish();
+          } else {
+            s.state = 'lost';
+            s.bx = s.px; s.by = PY - BR - 1;
+          }
+          updateScore();
+        }
+      }
+
+      function update(k){
+        s.t += k;
+        if (s.held) s.px += s.held * 6 * k;
+        s.px = Math.min(Math.max(s.px, PW / 2), W - PW / 2);
+        if (s.state === 'play'){
+          s.spin += 0.12 * k;
+          step(k / 2);
+          if (s.state === 'play') step(k / 2); // two half-steps so fast nuts can't skip a brick
+        } else if (s.state !== 'over'){
+          s.bx = s.px;
+          s.by = PY - BR - 1;
+        }
+      }
+
+      function drawNut(x, y){
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(s.spin);
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++){
+          const a = i * Math.PI / 3;
+          ctx.lineTo(Math.cos(a) * BR * 1.15, Math.sin(a) * BR * 1.15);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#ffc93c';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, 0, BR * 0.42, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.bg2;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function draw(){
+        background(0);
+        for (const b of s.bricks){
+          if (!b.alive) continue;
+          rrect(b.x, b.y, BW, BH, 4);
+          const g = ctx.createLinearGradient(0, b.y, 0, b.y + BH);
+          g.addColorStop(0, '#ffffff');
+          g.addColorStop(0.25, b.color);
+          g.addColorStop(1, '#1c2a30');
+          ctx.fillStyle = g;
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.6)';
+          ctx.beginPath(); ctx.arc(b.x + 5, b.y + BH / 2, 1.6, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(b.x + BW - 5, b.y + BH / 2, 1.6, 0, Math.PI * 2); ctx.fill();
+        }
+
+        // paddle: a wide robot visor on a metal bar
+        const px = s.px - PW / 2;
+        const pg = ctx.createLinearGradient(0, PY, 0, PY + PH);
+        pg.addColorStop(0, '#f6f7f8');
+        pg.addColorStop(1, '#7e8d99');
+        rrect(px, PY, PW, PH, 6);
+        ctx.fillStyle = pg;
+        ctx.fill();
+        rrect(px + 12, PY + 3, PW - 24, PH - 6, 4);
+        ctx.fillStyle = '#2c2f34';
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(255,255,255,0.8)';
+        ctx.shadowBlur = 4;
+        const look = Math.max(-6, Math.min(6, (s.bx - s.px) / 20));
+        for (const side of [-1, 1]){
+          ctx.beginPath();
+          ctx.arc(s.px + side * 10 + look, PY + PH / 2, 2.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+
+        if (s.state !== 'over') drawNut(s.bx, s.by);
+
+        // lives as little nuts in the corner
+        for (let i = 0; i < s.lives; i++){
+          ctx.fillStyle = '#ffc93c';
+          ctx.beginPath();
+          ctx.arc(W - 16 - i * 16, 22, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.save();
+        ctx.font = `800 14px Nunito, sans-serif`;
+        ctx.fillStyle = COLORS.text;
+        ctx.globalAlpha = 0.85;
+        ctx.fillText(`wall ${s.wall}`, 12, 27);
+        ctx.restore();
+
+        if (s.state === 'ready'){
+          centerText('Breakout', H / 2 + 20, 44);
+          smallText('tap or press space to launch', H / 2 + 62);
+        }
+        if (s.state === 'cleared'){
+          centerText('Wall cleared!', H / 2 + 20, 40);
+          smallText('tap to launch the next one', H / 2 + 60);
+        }
+        if (s.state === 'lost') smallText('tap to launch again', H / 2 + 60);
+        if (s.state === 'over'){
+          centerText('Out of nuts', H / 2, 42);
+          smallText('tap to play again', H / 2 + 42);
+        }
+      }
+
+      function scoreText(){
+        const best = getBest(KEY);
+        return `score ${s.score} · best ${best === null ? '-' : best}`;
+      }
+
+      return { reset, press, move, key, update, draw, scoreText, hint: 'Move with your finger, mouse or arrow keys. Break every plate.' };
+    })();
+
+    // ===========================================================
+    // Whack-a-bot: 30 seconds, bots pop out of 9 hatches -- tap
+    // them before they duck. Red-eyed bots are traps (-3).
+    // Keyboard: 7 8 9 / 4 5 6 / 1 2 3 like a number pad.
+    // ===========================================================
+    const Whack = (() => {
+      const KEY = 'robot632_best_whack';
+      const ROUND_MS = 30000;
+      const CELL = 104, GRID_X = (W - CELL * 3) / 2, GRID_Y = 92;
+      const NUMPAD = { '7': 0, '8': 1, '9': 2, '4': 3, '5': 4, '6': 5, '1': 6, '2': 7, '3': 8 };
+      let s;
+
+      function reset(){
+        s = { state: 'ready', score: 0, timeLeft: ROUND_MS, holes: Array.from({ length: 9 }, () => null),
+              nextSpawn: 0, overAt: 0, t: 0, pops: [] };
+        updateScore();
+      }
+
+      function cellCenter(i){
+        return { x: GRID_X + (i % 3) * CELL + CELL / 2, y: GRID_Y + Math.floor(i / 3) * CELL + CELL / 2 + 14 };
+      }
+
+      function whack(i){
+        const h = s.holes[i];
+        if (!h || h.hit || h.rise < 0.35) return;
+        h.hit = true;
+        h.life = Math.min(h.life, h.age + 160); // ducks right away
+        const c = cellCenter(i);
+        if (h.trap){
+          s.score = Math.max(0, s.score - 3);
+          s.pops.push({ x: c.x, y: c.y - 40, text: '-3', color: '#ff6b6b', age: 0 });
+          beep(150, 0.25, 'sawtooth', 0.04);
+        } else {
+          s.score++;
+          s.pops.push({ x: c.x, y: c.y - 40, text: '+1', color: '#4be9ff', age: 0 });
+          beep(900 + Math.random() * 200, 0.06, 'square', 0.03);
+        }
+        updateScore();
+      }
+
+      function press(pt){
+        if (s.state === 'ready'){ s.state = 'play'; return; }
+        if (s.state === 'over'){
+          if (performance.now() - s.overAt > 600) reset();
+          return;
+        }
+        if (!pt) return;
+        const col = Math.floor((pt.x - GRID_X) / CELL);
+        const row = Math.floor((pt.y - GRID_Y) / CELL);
+        if (col >= 0 && col < 3 && row >= 0 && row < 3) whack(row * 3 + col);
+      }
+
+      function key(k, down){
+        if (!down || !(k in NUMPAD)) return;
+        if (s.state === 'ready') s.state = 'play';
+        if (s.state === 'play') whack(NUMPAD[k]);
+      }
+
+      function update(k){
+        const ms = k * (1000 / 60);
+        s.t += k;
+        s.pops.forEach(p => { p.age += ms; });
+        s.pops = s.pops.filter(p => p.age < 700);
+        if (s.state !== 'play') return;
+
+        s.timeLeft -= ms;
+        if (s.timeLeft <= 0){
+          s.timeLeft = 0;
+          s.state = 'over';
+          s.overAt = performance.now();
+          s.holes = s.holes.map(() => null);
+          const best = getBest(KEY);
+          if (best === null || s.score > best) setBest(KEY, s.score);
+          if (s.score >= 30) trophy('whack_30');
+          beep(440, 0.12, 'triangle', 0.05);
+          setTimeout(() => beep(330, 0.2, 'triangle', 0.05), 130);
+          updateScore();
+          return;
+        }
+
+        // gets busier as the clock runs down
+        const progress = 1 - s.timeLeft / ROUND_MS;
+        s.nextSpawn -= ms;
+        const up = s.holes.filter(Boolean).length;
+        if (s.nextSpawn <= 0 && up < 2 + Math.round(progress * 2)){
+          const free = s.holes.map((h, i) => h ? -1 : i).filter(i => i >= 0);
+          const i = free[Math.floor(Math.random() * free.length)];
+          s.holes[i] = { age: 0, life: 1050 - progress * 450 + Math.random() * 250, rise: 0, hit: false, trap: Math.random() < 0.14 };
+          s.nextSpawn = 420 - progress * 220 + Math.random() * 200;
+        }
+
+        s.holes.forEach((h, i) => {
+          if (!h) return;
+          h.age += ms;
+          const pop = 140;
+          h.rise = h.age < pop ? h.age / pop : h.age > h.life - pop ? Math.max(0, (h.life - h.age) / pop) : 1;
+          if (h.age >= h.life) s.holes[i] = null;
+        });
+      }
+
+      function draw(){
+        background(0);
+        // time bar
+        rrect(20, 52, W - 40, 10, 5);
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fill();
+        const frac = s.timeLeft / ROUND_MS;
+        if (frac > 0){
+          rrect(20, 52, (W - 40) * frac, 10, 5);
+          ctx.fillStyle = frac < 0.2 ? '#ff6b6b' : '#4be9ff';
+          ctx.fill();
+        }
+        ctx.save();
+        ctx.font = `800 15px Nunito, sans-serif`;
+        ctx.fillStyle = COLORS.text;
+        ctx.textAlign = 'left';
+        ctx.fillText(`whacked ${s.score}`, 20, 38);
+        ctx.textAlign = 'right';
+        ctx.fillText(`${Math.ceil(s.timeLeft / 1000)}s`, W - 20, 38);
+        ctx.restore();
+
+        for (let i = 0; i < 9; i++){
+          const c = cellCenter(i);
+          const hatchY = c.y + 24;
+          // hatch (back half)
+          ctx.beginPath();
+          ctx.ellipse(c.x, hatchY, 38, 12, 0, 0, Math.PI * 2);
+          ctx.fillStyle = '#05090c';
+          ctx.fill();
+
+          const h = s.holes[i];
+          if (h && h.rise > 0){
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(c.x - CELL / 2, c.y - CELL / 2 - 30, CELL, hatchY - (c.y - CELL / 2 - 30));
+            ctx.clip();
+            const lift = (1 - h.rise) * 64;
+            drawBot(c.x, c.y - 6 + lift, 46, {
+              closed: h.hit,
+              eyeColor: h.trap ? '#ff3b3b' : undefined,
+              light: h.trap ? '#ff6b6b' : undefined
+            });
+            ctx.restore();
+          }
+
+          // hatch rim (front lip) drawn over the bot
+          ctx.beginPath();
+          ctx.ellipse(c.x, hatchY, 38, 12, 0, 0, Math.PI);
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#7e8d99';
+          ctx.stroke();
+        }
+
+        for (const p of s.pops){
+          ctx.save();
+          ctx.globalAlpha = 1 - p.age / 700;
+          ctx.font = `26px Bangers, Nunito, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.fillStyle = p.color;
+          ctx.fillText(p.text, p.x, p.y - p.age / 25);
+          ctx.restore();
+        }
+
+        if (s.state === 'ready'){
+          centerText('Whack-a-bot', H / 2, 42);
+          smallText('tap to start · avoid the red-eyed ones', H / 2 + 40);
+        }
+        if (s.state === 'over'){
+          centerText(`${s.score} whacked!`, H / 2, 44);
+          smallText('tap to play again', H / 2 + 42);
+        }
+      }
+
+      function scoreText(){
+        const best = getBest(KEY);
+        return `whacked ${s.score} · best ${best === null ? '-' : best}`;
+      }
+
+      return { reset, press, key, update, draw, scoreText, hint: 'Tap bots before they duck (or use 1-9). Red eyes = trap, -3.' };
+    })();
+
+    // ===========================================================
     // Picker, input, and the shared loop
     // ===========================================================
-    const ARCADE = { flappy: Flappy, snake: Snake, reflex: Reflex };
-    const TITLES = { signal: 'SIGNAL SEQUENCE', flappy: 'FLAPPY ROBOT', snake: 'SNAKE', reflex: 'REFLEX' };
-    const PAGE_TITLES = { signal: 'Signal Sequence', flappy: 'Flappy Robot', snake: 'Snake', reflex: 'Reflex' };
+    const ARCADE = { flappy: Flappy, snake: Snake, reflex: Reflex, breakout: Breakout, whack: Whack };
+    const TITLES = { signal: 'SIGNAL SEQUENCE', flappy: 'FLAPPY ROBOT', snake: 'SNAKE', reflex: 'REFLEX', breakout: 'BREAKOUT', whack: 'WHACK-A-BOT' };
+    const PAGE_TITLES = { signal: 'Signal Sequence', flappy: 'Flappy Robot', snake: 'Snake', reflex: 'Reflex', breakout: 'Breakout', whack: 'Whack-a-bot' };
+    const PLAYED_KEY = 'robot632_games_played';
+
+    // "Arcade regular" trophy: every game in the picker opened once
+    function markPlayed(name){
+      let played = [];
+      try { played = JSON.parse(localStorage.getItem(PLAYED_KEY)) || []; } catch (e){}
+      if (!played.includes(name)){
+        played.push(name);
+        try { localStorage.setItem(PLAYED_KEY, JSON.stringify(played)); } catch (e){}
+      }
+      if (Object.keys(TITLES).every(n => played.includes(n))) trophy('arcade');
+    }
     const TAB_KEY = 'robot632_games_tab';
     let current = null;
     let currentName = null;
@@ -1572,6 +1998,7 @@
         try { localStorage.setItem(TAB_KEY, name); } catch (e){}
         history.replaceState(null, '', `#${name}`);
       }
+      markPlayed(name);
 
       if (current){
         current.reset();
@@ -1601,13 +2028,23 @@
       });
     });
 
+    // pointer position in the game's own 360x440 coordinates
+    function toGame(e){
+      const r = canvas.getBoundingClientRect();
+      return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
+    }
+
     // tap / click: press, but on Snake a swipe turns instead
     let swipe = null;
     canvas.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       canvas.focus({ preventScroll: true });
       if (currentName === 'snake'){ swipe = { x: e.clientX, y: e.clientY }; return; }
-      current.press();
+      if (current.move) current.move(toGame(e).x);
+      current.press(toGame(e));
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (current && current.move) current.move(toGame(e).x);
     });
     canvas.addEventListener('pointerup', (e) => {
       if (currentName !== 'snake' || !swipe) return;
@@ -1631,10 +2068,19 @@
         Snake.turn(...DIRS[key]);
         return;
       }
+      if (current.key && (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'a' || key === 'd' || /^[1-9]$/.test(key))){
+        e.preventDefault();
+        if (!e.repeat) current.key(key, true);
+        return;
+      }
       if (key === ' ' || key === 'Enter' || (currentName === 'flappy' && key === 'ArrowUp')){
         e.preventDefault();
         if (!e.repeat) current.press();
       }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (current && current.key) current.key(e.key.length === 1 ? e.key.toLowerCase() : e.key, false);
     });
 
     dpad.querySelectorAll('button').forEach(b => {
@@ -1648,6 +2094,9 @@
     let saved = null;
     try { saved = localStorage.getItem(TAB_KEY); } catch (e){}
     const fromHash = location.hash.slice(1);
+    // the home page's Games button links here with #arcade; anything
+    // else means the visitor found the hidden corner link
+    if (fromHash !== 'arcade') trophy('corner');
     selectGame(TITLES[fromHash] ? fromHash : saved, false);
   })();
 </script>

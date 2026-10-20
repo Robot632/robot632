@@ -12,12 +12,34 @@
     var saved = localStorage.getItem('robot632_theme');
     var preferred = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     document.documentElement.dataset.theme = preferred;
-    // same idea for the graphics setting: "low" (the classic page)
-    // unless the visitor picked "high" in settings before
-    document.documentElement.dataset.graphics =
-      localStorage.getItem('robot632_graphics') === 'high' ? 'high' : 'low';
+    // Graphics: whatever the visitor picked in settings wins. With no
+    // pick yet, the page chooses for them (data-graphics-auto) --
+    // Low on weaker devices so it stays smooth, High on capable ones.
+    // A device that was auto-put on High but couldn't keep up gets
+    // remembered as Low (robot632_graphics_auto, see the frame-rate
+    // check further down). Ultra is only ever picked by hand.
+    // Ultra is High plus extras, so it sets data-graphics="high" too
+    // and adds data-ultra on top.
+    var root = document.documentElement;
+    var g = localStorage.getItem('robot632_graphics');
+    if (g !== 'low' && g !== 'high' && g !== 'ultra'){
+      root.dataset.graphicsAuto = 'true';
+      g = localStorage.getItem('robot632_graphics_auto');
+      if (g !== 'low'){
+        var nav = navigator;
+        var weak =
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+          (nav.connection && nav.connection.saveData) ||
+          (nav.deviceMemory && nav.deviceMemory < 4) ||
+          (nav.hardwareConcurrency && nav.hardwareConcurrency < 4);
+        g = weak ? 'low' : 'high';
+      }
+    }
+    root.dataset.graphics = (g === 'high' || g === 'ultra') ? 'high' : 'low';
+    if (g === 'ultra') root.dataset.ultra = 'true';
   })();
 </script>
+<script src="achievements.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Nunito:wght@700;800&family=Bangers&family=Permanent+Marker&family=Kalam:wght@700&family=Chewy&family=Rubik:wght@700&display=swap" rel="stylesheet">
@@ -592,7 +614,7 @@
     background:none;
     color: var(--text);
     font: 800 14px 'Nunito', sans-serif;
-    padding: 7px 13px;
+    padding: 7px 10px;
     border-radius: 9px;
     cursor:pointer;
     opacity: 0.7;
@@ -604,6 +626,21 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 0 color-mix(in srgb, var(--blue) 55%, black);
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
   }
+  .settings-link{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid var(--panel-line);
+    color: var(--text);
+    font-weight:800;
+    font-size:14px;
+    text-decoration:none;
+  }
+  .settings-link:hover{ text-decoration:underline; }
+  .settings-link span:first-of-type{ opacity:0.65; font-size:12px; }
+  .settings-link span:last-child{ margin-left:auto; }
   .settings-note{
     margin: 12px 0 0;
     font-size: 13px;
@@ -936,6 +973,210 @@
     text-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
 
+  /* ---- Pip's looks: data-tier 1 = cap, 2 = chrome paint, 3 = gold + crown ---- */
+  .pet-hat{
+    display:none;
+    position:absolute;
+    top:-5px;
+    left:10px;
+    width:24px;
+    height:7px;
+    border-radius: 8px 8px 1px 1px;
+    background: linear-gradient(180deg, #ff5a5f, #c8161d);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+    z-index:1;
+  }
+  .pet-hat::after{
+    content:'';
+    position:absolute;
+    right:-7px;
+    bottom:0;
+    width:9px;
+    height:3px;
+    border-radius:2px;
+    background:#a10f15;
+  }
+  .pet[data-tier="1"] .pet-hat,
+  .pet[data-tier="2"] .pet-hat,
+  .pet[data-tier="3"] .pet-hat{ display:block; }
+  .pet[data-tier="2"] .pet-body,
+  .pet[data-tier="2"] .pet-neck{
+    background: linear-gradient(180deg, #8fd0ff, #2f6fed 60%, #1b3f8f);
+  }
+  .pet[data-tier="3"] .pet-body,
+  .pet[data-tier="3"] .pet-neck{
+    background: linear-gradient(180deg, #fff1a8, #f2b81f 55%, #a8740a);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.6), inset 0 -3px 4px rgba(0,0,0,0.2), 0 0 8px rgba(255,200,40,0.6);
+  }
+  .pet[data-tier="3"] .pet-hat{
+    top:-8px;
+    height:9px;
+    border-radius:0;
+    background: linear-gradient(180deg, #fff1a8, #f2b81f 60%, #c8900e);
+    clip-path: polygon(0 100%, 0 25%, 20% 60%, 35% 0, 50% 55%, 65% 0, 80% 60%, 100% 25%, 100% 100%);
+  }
+  .pet[data-tier="3"] .pet-hat::after{ display:none; }
+  .pet-level{ font-size:11px; opacity:0.7; margin-top:2px; }
+
+  /* ---- holidays (High graphics): data-holiday on <html> ---- */
+  .bot-hat, .bot-pumpkin, .bot-martisor{ display:none; }
+  html[data-holiday="christmas"] .bot-hat,
+  html[data-holiday="newyear"] .bot-hat,
+  html[data-holiday="halloween"] .bot-pumpkin,
+  html[data-holiday="martisor"] .bot-martisor{ display:block; }
+
+  .bot-hat{
+    position:absolute;
+    top:-30px;
+    left:4px;
+    width:46px;
+    height:36px;
+    rotate:-14deg;
+    z-index:2;
+    pointer-events:none;
+  }
+  .hat-cone{
+    position:absolute;
+    left:5px;
+    bottom:6px;
+    width:36px;
+    height:30px;
+    clip-path: polygon(62% 0, 100% 100%, 0 100%);
+    background: linear-gradient(160deg, #ff5a5f, #c8161d 70%);
+  }
+  .hat-trim{
+    position:absolute;
+    left:0;
+    bottom:0;
+    width:46px;
+    height:9px;
+    border-radius:5px;
+    background: linear-gradient(180deg, #ffffff, #dfe4e8);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.25);
+  }
+  .hat-pom{
+    position:absolute;
+    left:22px;
+    top:-4px;
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #fff, #dfe4e8);
+  }
+  /* party hat for new year: striped cone, no fur trim */
+  html[data-holiday="newyear"] .hat-cone{
+    clip-path: polygon(50% 0, 85% 100%, 15% 100%);
+    background: repeating-linear-gradient(135deg, #ff6fc1 0 5px, #2f6fed 5px 10px, #ffd65a 10px 15px);
+  }
+  html[data-holiday="newyear"] .hat-trim{ display:none; }
+  html[data-holiday="newyear"] .hat-pom{ left:18px; background: radial-gradient(circle at 35% 30%, #fff6c8, #ffd65a); }
+
+  .bot-pumpkin{
+    position:absolute;
+    left:-30px;
+    bottom:-2px;
+    width:24px;
+    height:19px;
+    border-radius: 45%;
+    background:
+      radial-gradient(ellipse 30% 70% at 50% 50%, rgba(0,0,0,0.12), transparent 70%),
+      radial-gradient(circle at 35% 30%, #ffb15c, #ff7a1a 55%, #c4520a);
+    box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+  }
+  .bot-pumpkin::before{
+    content:'';
+    position:absolute;
+    left:10px;
+    top:-5px;
+    width:4px;
+    height:6px;
+    border-radius:2px;
+    background:#3f7d2c;
+  }
+  .bot-pumpkin::after{
+    content:'▴ ▴';
+    position:absolute;
+    left:0;
+    right:0;
+    top:3px;
+    text-align:center;
+    font-size:8px;
+    line-height:1;
+    color:#3a1a00;
+  }
+  html[data-holiday="halloween"] .bot-icon .eye{
+    background: radial-gradient(circle at 35% 30%, #fff1c8, #ffb15c 45%, #ff7a1a 85%);
+    box-shadow: 0 0 10px 3px rgba(255,140,30,0.9);
+  }
+
+  /* mărțișor: red-and-white string hanging off the antenna */
+  .bot-martisor{
+    position:absolute;
+    top:-20px;
+    left:calc(41% + 6px);
+    width:4px;
+    height:34px;
+    border-radius:2px;
+    rotate:8deg;
+    transform-origin: top center;
+    background: repeating-linear-gradient(160deg, #ffffff 0 3px, #e2242b 3px 6px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    z-index:2;
+  }
+  .bot-martisor::after{
+    content:'';
+    position:absolute;
+    left:-4px;
+    bottom:-6px;
+    width:12px;
+    height:10px;
+    border-radius:50% 50% 45% 45%;
+    background: radial-gradient(circle at 50% 45%, #ffffff 0 2px, #e2242b 3px);
+  }
+
+  /* ---- Ultra graphics: data-ultra on <html>, --px/--py set by JS (-1..1) ---- */
+  html[data-ultra="true"] body{ perspective: 1400px; }
+  html[data-ultra="true"] .panel{
+    transform: rotateX(calc(var(--py, 0) * -2.5deg)) rotateY(calc(var(--px, 0) * 3.5deg));
+  }
+  html[data-ultra="true"] .title-row{ translate: calc(var(--px, 0) * 16px) calc(var(--py, 0) * 10px); }
+  html[data-ultra="true"] .tagline{ translate: calc(var(--px, 0) * 9px) calc(var(--py, 0) * 6px); }
+  html[data-ultra="true"] .visit-counter,
+  html[data-ultra="true"] .phase-label{ translate: calc(var(--px, 0) * 6px) calc(var(--py, 0) * 4px); }
+  html[data-ultra="true"] .buttons{ translate: calc(var(--px, 0) * 4px) calc(var(--py, 0) * 3px); }
+  /* a soft light sheen that slides across the panel */
+  html[data-ultra="true"] .panel::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    pointer-events:none;
+    background: radial-gradient(520px circle at calc(50% + var(--px, 0) * 40%) calc(40% + var(--py, 0) * 40%), rgba(255,255,255,0.09), transparent 60%);
+  }
+  html[data-ultra="true"] .wordmark span{
+    text-shadow: 0 2px 6px var(--text-shadow), 0 0 18px rgba(255,255,255,0.35);
+  }
+  html[data-ultra="true"] .bot-icon{
+    filter: drop-shadow(0 10px 14px rgba(0,0,0,0.28)) drop-shadow(0 0 16px rgba(255,255,255,0.18));
+  }
+  html[data-ultra="true"]:not([data-phase="night"]):not([data-phase="evening"]):not([data-holiday="halloween"]) .bot-icon .eye{
+    box-shadow: 0 0 12px 4px rgba(255,255,255,0.85), inset -2px -2px 3px rgba(0,0,0,0.3);
+  }
+  html[data-ultra="true"] .btn{
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,0.55),
+      inset 0 -4px 8px rgba(0,0,0,0.22),
+      0 6px 0 color-mix(in srgb, var(--btn-color, var(--pink)) 55%, black),
+      0 11px 18px rgba(0,0,0,0.32),
+      0 0 28px color-mix(in srgb, var(--btn-color, var(--pink)) 55%, transparent);
+  }
+  html[data-ultra="true"] .btn:active{
+    box-shadow:
+      inset 0 3px 8px rgba(0,0,0,0.4),
+      0 0 0 color-mix(in srgb, var(--btn-color, var(--pink)) 55%, black),
+      0 0 22px color-mix(in srgb, var(--btn-color, var(--pink)) 45%, transparent);
+  }
+
   @media (prefers-reduced-motion: reduce){
     .bot-zzz span, .bot-mug span, .pet.walking .pet-tread,
     .pet.walking .pet-body, .pet.walking .pet-eyes,
@@ -971,9 +1212,11 @@
         <div class="seg" role="radiogroup" aria-labelledby="graphics-label">
           <button type="button" role="radio" data-graphics="low">Low</button>
           <button type="button" role="radio" data-graphics="high">High</button>
+          <button type="button" role="radio" data-graphics="ultra">Ultra</button>
         </div>
       </div>
       <p class="settings-note" id="settings-note"></p>
+      <a class="settings-link" href="achievements.html">🏆 Trophies <span id="trophy-count"></span><span aria-hidden="true">&rarr;</span></a>
     </div>
 
     <div class="dvd-bot" id="dvd-bot" aria-hidden="true">
@@ -998,6 +1241,9 @@
         </div>
         <div class="bot-zzz" aria-hidden="true"><span>z</span><span>z</span><span>Z</span></div>
         <div class="bot-mug" aria-hidden="true"><span></span><span></span></div>
+        <div class="bot-hat" aria-hidden="true"><span class="hat-cone"></span><span class="hat-trim"></span><span class="hat-pom"></span></div>
+        <div class="bot-pumpkin" aria-hidden="true"></div>
+        <div class="bot-martisor" aria-hidden="true"></div>
       </div>
 
       <h1 class="wordmark">
@@ -1072,10 +1318,10 @@
     // Material Icons, Apache License 2.0).
     const SETTINGS_ICON = 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z';
 
-    // graphics: 'high' entries only render while High graphics is on.
+    // graphics: 'high' entries only render while High (or Ultra) is on.
     const BUTTONS = [
       { label: 'Roblox',  href: 'roblox.html', color: 'var(--roblox-red)', visible: true  },
-      { label: 'Games',   href: 'walle.html',  color: 'var(--blue)',       visible: true, graphics: 'high' },
+      { label: 'Games',   href: 'walle.html#arcade', color: 'var(--blue)',       visible: true, graphics: 'high' },
       { label: 'About',   href: '#',           color: 'var(--orange)',     visible: false },
       { label: 'Friends', href: '#',           color: 'var(--green)',      visible: false }
     ];
@@ -1181,7 +1427,7 @@
       const container = document.getElementById('buttons');
       container.innerHTML = BUTTONS
         .filter(b => b.visible !== false)
-        .filter(b => !b.graphics || b.graphics === getGraphics())
+        .filter(b => !b.graphics || getGraphics() !== 'low') // graphics: 'high' = High or Ultra
         .map(b => `
           <a class="btn" style="--btn-color:${b.color}" href="${b.href}">${b.label}</a>
         `).join('');
@@ -1303,21 +1549,36 @@
     // and starts/stops the High extras (HighGfx, further down).
     // -----------------------------------------------------------
     const GRAPHICS_KEY = 'robot632_graphics';
+    const GRAPHICS_MODES = ['low', 'high', 'ultra'];
     const GRAPHICS_NOTES = {
       low: 'The classic Robot632 look. Lightest on battery.',
-      high: 'A sky that follows your clock, a sleepy (or caffeinated) robot, eyes that follow you, Pip the pet robot, and a Games button.'
+      high: 'A sky that follows your clock, holiday outfits, a sleepy (or caffeinated) robot, eyes that follow you, Pip the pet robot, and a Games button.',
+      ultra: 'Everything in High, plus 3D parallax that follows your mouse (or tilting your phone), extra glow and almost twice the particles.'
     };
 
     function getGraphics(){
-      return document.documentElement.dataset.graphics === 'high' ? 'high' : 'low';
+      const root = document.documentElement;
+      if (root.dataset.graphics !== 'high') return 'low';
+      return root.dataset.ultra === 'true' ? 'ultra' : 'high';
     }
 
     function applyGraphics(mode){
-      document.documentElement.dataset.graphics = mode;
+      const root = document.documentElement;
+      const was = getGraphics();
+      delete root.dataset.graphicsAuto; // a hand-picked setting replaces the automatic one
+      root.dataset.graphics = mode === 'low' ? 'low' : 'high';
+      if (mode === 'ultra') root.dataset.ultra = 'true'; else delete root.dataset.ultra;
       localStorage.setItem(GRAPHICS_KEY, mode);
       renderButtons();
       syncSettings();
-      if (mode === 'high') HighGfx.start(); else HighGfx.stop();
+      if (mode === 'low') HighGfx.stop();
+      else if (was === 'low') HighGfx.start();
+      else HighGfx.refresh();
+      if (mode === 'ultra') Ultra.start(); else Ultra.stop();
+      if (window.R632Ach){
+        if (mode !== 'low') R632Ach.unlock('high_graphics');
+        if (mode === 'ultra') R632Ach.unlock('ultra_graphics');
+      }
     }
 
     const settingsPop = document.getElementById('settings-pop');
@@ -1329,7 +1590,13 @@
         b.setAttribute('aria-checked', on ? 'true' : 'false');
         b.tabIndex = on ? 0 : -1;
       });
-      document.getElementById('settings-note').textContent = GRAPHICS_NOTES[mode];
+      document.getElementById('settings-note').textContent = GRAPHICS_NOTES[mode] +
+        (document.documentElement.dataset.graphicsAuto === 'true' ? ' (Picked automatically for this device.)' : '');
+      if (window.R632Ach){
+        const got = R632Ach.unlocked();
+        const n = R632Ach.LIST.filter(a => got[a.id]).length;
+        document.getElementById('trophy-count').textContent = `${n}/${R632Ach.LIST.length}`;
+      }
     }
 
     function openSettings(){
@@ -1353,17 +1620,20 @@
 
     settingsPop.querySelectorAll('[data-graphics]').forEach(b => {
       b.addEventListener('click', () => {
+        if (b.dataset.graphics === 'ultra') Ultra.askForTilt(); // needs this tap on iOS
         if (b.dataset.graphics !== getGraphics()) applyGraphics(b.dataset.graphics);
       });
     });
 
-    // arrow keys move between Low / High, like a normal radio group
+    // arrow keys move between Low / High / Ultra, like a normal radio group
     settingsPop.addEventListener('keydown', (e) => {
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)){
-        e.preventDefault();
-        applyGraphics(getGraphics() === 'high' ? 'low' : 'high');
-        settingsPop.querySelector('[aria-checked="true"]').focus();
-      }
+      const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1
+                 : (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? -1 : 0;
+      if (!step || !e.target.closest('.seg')) return;
+      e.preventDefault();
+      const i = GRAPHICS_MODES.indexOf(getGraphics());
+      applyGraphics(GRAPHICS_MODES[(i + step + GRAPHICS_MODES.length) % GRAPHICS_MODES.length]);
+      settingsPop.querySelector('[aria-checked="true"]').focus();
     });
 
     document.addEventListener('pointerdown', (e) => {
@@ -1698,6 +1968,10 @@
     // coming back after a long time means a hungry Pip. Tap Pip to
     // see the fuel meter and drop it a bolt; it rolls over and
     // eats it. At night (see HighGfx) it falls asleep where it is.
+    //
+    // Pip also keeps count of every bolt it has ever eaten and
+    // dresses up as it goes (TIERS): a cap at 10, a new paint job at
+    // 50, and solid gold with a crown at 100.
     // -----------------------------------------------------------
     const Pet = (() => {
       const KEY = 'robot632_pet';
@@ -1705,26 +1979,41 @@
       const PET_W = 40;
       const EDGE = 26;                // stays clear of the corner bolts
       const BOLT_FUEL = 25;
+      const TIERS = [
+        { at: 0,   name: 'rookie' },
+        { at: 10,  name: 'capped',  trophy: 'pip_10' },
+        { at: 50,  name: 'chrome',  trophy: 'pip_50' },
+        { at: 100, name: 'royal',   trophy: 'pip_100' }
+      ];
 
       let el = null, bubble = null, meterFill = null, feedBtn = null, think = null;
       let raf = null, saveTimer = null, lastFrame = 0;
       let x = EDGE, dir = 1, target = null, pauseUntil = 0;
       let fuel = 70;
+      let eaten = 0;
       let snack = null; // { el, x, landed }
+
+      function tier(){
+        let t = 0;
+        TIERS.forEach((x, i) => { if (eaten >= x.at) t = i; });
+        return t;
+      }
 
       function load(){
         try{
           const saved = JSON.parse(localStorage.getItem(KEY));
           if (saved && typeof saved.fuel === 'number' && typeof saved.t === 'number'){
             fuel = Math.max(0, Math.min(100, saved.fuel - (Date.now() - saved.t) / DECAY_MS));
+            eaten = typeof saved.eaten === 'number' ? saved.eaten : 0;
             return;
           }
         } catch (e){}
         fuel = 70;
+        eaten = 0;
       }
 
       function save(){
-        localStorage.setItem(KEY, JSON.stringify({ fuel: Math.round(fuel * 10) / 10, t: Date.now() }));
+        localStorage.setItem(KEY, JSON.stringify({ fuel: Math.round(fuel * 10) / 10, t: Date.now(), eaten }));
       }
 
       function mood(){ return fuel >= 60 ? 'happy' : fuel >= 25 ? 'ok' : 'hungry'; }
@@ -1742,6 +2031,7 @@
         el.innerHTML = `
           <span class="pet-inner" aria-hidden="true">
             <span class="pet-neck"></span>
+            <span class="pet-hat"></span>
             <span class="pet-eyes"><span class="pet-eye"></span><span class="pet-eye"></span></span>
             <span class="pet-body"></span>
             <span class="pet-tread"></span>
@@ -1755,6 +2045,7 @@
         bubble.hidden = true;
         bubble.innerHTML = `
           <div><span>Pip</span> <span class="pet-status" style="opacity:0.7"></span></div>
+          <div class="pet-level"></div>
           <div class="pet-meter" role="meter" aria-label="Pip's fuel" aria-valuemin="0" aria-valuemax="100"><div class="pet-meter-fill"></div></div>
           <button type="button" class="pet-feed">Drop a bolt 🔩</button>
         `;
@@ -1781,6 +2072,10 @@
         bubble.querySelector('.pet-status').textContent = status;
         meterFill.style.width = `${Math.round(fuel)}%`;
         bubble.querySelector('.pet-meter').setAttribute('aria-valuenow', Math.round(fuel));
+        const t = tier();
+        const next = TIERS[t + 1];
+        bubble.querySelector('.pet-level').textContent =
+          `${eaten} bolt${eaten === 1 ? '' : 's'} eaten` + (next ? ` · new look at ${next.at}` : ' · max level 👑');
         feedBtn.disabled = !!snack || fuel >= 99.5;
         feedBtn.textContent = fuel >= 99.5 ? 'Full! 🔋' : 'Drop a bolt 🔩';
       }
@@ -1843,8 +2138,16 @@
         snack.el.remove();
         snack = null;
         fuel = Math.min(100, fuel + BOLT_FUEL);
+        const before = tier();
+        eaten += 1;
         save();
-        hearts(4);
+        const after = tier();
+        el.dataset.tier = after;
+        if (window.R632Ach){
+          R632Ach.unlock('pip_fed');
+          if (TIERS[after].trophy) R632Ach.unlock(TIERS[after].trophy);
+        }
+        hearts(after > before ? 10 : 4);
         blip(520, 0.07, 'square', 0.03);
         setTimeout(() => blip(780, 0.09, 'square', 0.03), 90);
         if (!reduceMotion){
@@ -1907,6 +2210,7 @@
           if (el) return;
           load();
           build();
+          el.dataset.tier = tier();
           const b = bounds();
           x = b.min + Math.random() * (b.max - b.min);
           lastFrame = 0;
@@ -1943,7 +2247,34 @@
     // #fx-canvas: twinkling stars + the odd shooting star, rising
     // morning bubbles, drifting day dust, or evening fireflies.
     // Also makes the bot's eyes follow the pointer while awake.
+    //
+    // Holidays (HOLIDAYS below) take over the particles and dress
+    // the bot up (data-holiday on <html>, styled in CSS). Preview
+    // one any day with ?holiday=halloween (or christmas, newyear,
+    // valentine, martisor) in the URL.
     // -----------------------------------------------------------
+    const HOLIDAYS = [
+      { id: 'christmas', label: '🎄 merry christmas from robot632!', from: [12, 20], to: [12, 30], fx: 'snow' },
+      { id: 'newyear',   label: '🎆 happy new year!',                from: [12, 31], to: [1, 2],   fx: 'confetti' },
+      { id: 'valentine', label: "💖 happy valentine's day",          from: [2, 14],  to: [2, 14],  fx: 'hearts' },
+      { id: 'martisor',  label: '🌸 happy mărțișor!',                from: [3, 1],   to: [3, 7],   fx: 'petals' },
+      { id: 'halloween', label: '🎃 happy halloween!',               from: [10, 25], to: [10, 31], fx: 'embers' }
+    ];
+
+    function holidayFor(date){
+      const preview = new URLSearchParams(location.search).get('holiday');
+      if (preview){
+        const h = HOLIDAYS.find(x => x.id === preview);
+        if (h) return h;
+      }
+      const m = date.getMonth() + 1, d = date.getDate();
+      const v = m * 100 + d;
+      return HOLIDAYS.find(h => {
+        const a = h.from[0] * 100 + h.from[1], b = h.to[0] * 100 + h.to[1];
+        return a <= b ? (v >= a && v <= b) : (v >= a || v <= b); // ranges may wrap past new year
+      }) || null;
+    }
+
     const HighGfx = (() => {
       const canvas = document.getElementById('fx-canvas');
       const ctx = canvas.getContext('2d');
@@ -1956,9 +2287,13 @@
         day:     { label: '☀️ day: robot is fully operational', count: 30 },
         evening: { label: '🌇 evening: robot is winding down', count: 22 }
       };
+      const FX_COUNTS = { snow: 70, confetti: 60, hearts: 22, petals: 30, embers: 40 };
+      const CONFETTI = ['#ff6fc1', '#2f6fed', '#ff8a3d', '#2fb84f', '#ffd65a', '#4be9ff'];
 
       let running = false;
       let phase = null;
+      let holiday = null;
+      let kind = null; // what particles are drawn: a phase name or a holiday fx
       let particles = [];
       let shooting = null;
       let nextShootAt = 0;
@@ -1987,24 +2322,46 @@
       });
 
       function makeParticles(){
-        const n = PHASES[phase].count;
-        particles = Array.from({ length: n }, () => ({
-          x: Math.random() * W,
-          y: Math.random() * H,
-          r: phase === 'night' ? 0.6 + Math.random() * 1.4 : 1.5 + Math.random() * 3,
-          vx: (Math.random() - 0.5) * 0.2,
-          vy: phase === 'morning' ? -(0.15 + Math.random() * 0.3) : (Math.random() - 0.5) * 0.15,
-          t: Math.random() * Math.PI * 2,
-          s: 0.6 + Math.random() * 1.2
-        }));
+        const base = FX_COUNTS[kind] || PHASES[phase].count;
+        const n = Math.round(base * (getGraphics() === 'ultra' ? 1.8 : 1));
+        particles = Array.from({ length: n }, () => {
+          const p = {
+            x: Math.random() * W,
+            y: Math.random() * H,
+            r: kind === 'night' ? 0.6 + Math.random() * 1.4 : 1.5 + Math.random() * 3,
+            vx: (Math.random() - 0.5) * 0.2,
+            vy: (Math.random() - 0.5) * 0.15,
+            t: Math.random() * Math.PI * 2,
+            s: 0.6 + Math.random() * 1.2,
+            spin: (Math.random() - 0.5) * 0.15,
+            color: CONFETTI[Math.floor(Math.random() * CONFETTI.length)]
+          };
+          if (kind === 'morning') p.vy = -(0.15 + Math.random() * 0.3);
+          if (kind === 'snow') p.vy = 0.3 + Math.random() * 0.6;
+          if (kind === 'confetti') p.vy = 0.6 + Math.random() * 0.9;
+          if (kind === 'petals') p.vy = 0.25 + Math.random() * 0.4;
+          if (kind === 'hearts' || kind === 'embers') p.vy = -(0.25 + Math.random() * 0.5);
+          return p;
+        });
       }
 
       function updatePhase(){
-        const p = phaseFor(new Date().getHours());
-        if (p === phase) return;
+        const now = new Date();
+        const p = phaseFor(now.getHours());
+        const h = holidayFor(now);
+        if (p === phase && h === holiday) return;
         phase = p;
-        document.documentElement.dataset.phase = p;
-        phaseLabel.textContent = PHASES[p].label;
+        holiday = h;
+        kind = h ? h.fx : p;
+        const root = document.documentElement;
+        root.dataset.phase = p;
+        if (h){
+          root.dataset.holiday = h.id;
+          if (window.R632Ach) R632Ach.unlock('holiday');
+        } else {
+          delete root.dataset.holiday;
+        }
+        phaseLabel.textContent = h ? h.label : PHASES[p].label;
         if (p === 'night') eyes.forEach(eye => { eye.style.translate = ''; });
         makeParticles();
         if (reduceMotion) draw(0);
@@ -2025,45 +2382,89 @@
         ctx.fill();
       }
 
-      function draw(now){
-        ctx.clearRect(0, 0, W, H);
-        const light = document.documentElement.dataset.theme === 'light';
-        for (const p of particles){
-          if (!reduceMotion){
-            p.t += 0.02 * p.s;
-            if (phase === 'evening'){
-              p.x += Math.cos(p.t * 0.7) * 0.4 + p.vx;
-              p.y += Math.sin(p.t * 0.9) * 0.3 + p.vy;
-            } else if (phase !== 'night'){
-              p.x += p.vx + Math.sin(p.t) * 0.15;
-              p.y += p.vy;
-            }
-            if (p.y < -10) p.y = H + 10;
-            if (p.y > H + 10) p.y = -10;
-            if (p.x < -10) p.x = W + 10;
-            if (p.x > W + 10) p.x = -10;
-          }
-          if (phase === 'night'){
+      function move(p){
+        p.t += 0.02 * p.s;
+        if (kind === 'evening'){
+          p.x += Math.cos(p.t * 0.7) * 0.4 + p.vx;
+          p.y += Math.sin(p.t * 0.9) * 0.3 + p.vy;
+        } else if (kind !== 'night'){
+          // everything else drifts along its own vy with a little sway
+          p.x += p.vx + Math.sin(p.t) * (kind === 'snow' || kind === 'petals' ? 0.4 : 0.15);
+          p.y += p.vy;
+        }
+        if (p.y < -10) p.y = H + 10;
+        if (p.y > H + 10) p.y = -10;
+        if (p.x < -10) p.x = W + 10;
+        if (p.x > W + 10) p.x = -10;
+      }
+
+      function drawParticle(p, light){
+        switch (kind){
+          case 'night':
             ctx.globalAlpha = 0.3 + 0.7 * Math.abs(Math.sin(p.t));
             dot(p.x, p.y, p.r, light ? '#3a4a9a' : '#ffffff', p.r > 1.6);
-          } else if (phase === 'morning'){
+            break;
+          case 'morning':
             ctx.globalAlpha = 0.35;
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.r * 1.6, 0, Math.PI * 2);
             ctx.strokeStyle = light ? 'rgba(200,110,40,0.8)' : 'rgba(255,236,200,0.9)';
             ctx.lineWidth = 1.2;
             ctx.stroke();
-          } else if (phase === 'day'){
+            break;
+          case 'day':
             ctx.globalAlpha = 0.25 + 0.15 * Math.sin(p.t);
             dot(p.x, p.y, p.r * 0.7, light ? 'rgba(0,90,90,0.7)' : '#ffffff', false);
-          } else {
+            break;
+          case 'evening':
             ctx.globalAlpha = 0.25 + 0.75 * Math.max(0, Math.sin(p.t * 1.3));
             dot(p.x, p.y, p.r * 0.8, light ? '#e08a10' : '#ffc65a', true);
-          }
+            break;
+          case 'snow':
+            ctx.globalAlpha = 0.85;
+            dot(p.x, p.y, p.r * 0.8, light ? '#8fb3c9' : '#ffffff', false);
+            break;
+          case 'confetti':
+          case 'petals':
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.t * 3 * p.spin * 10);
+            ctx.globalAlpha = 0.9;
+            ctx.fillStyle = kind === 'petals' ? (p.s > 1.2 ? '#e2242b' : (light ? '#f3b6c8' : '#ffffff')) : p.color;
+            if (kind === 'petals'){
+              ctx.beginPath();
+              ctx.ellipse(0, 0, p.r * 1.2, p.r * 0.6, 0, 0, Math.PI * 2);
+              ctx.fill();
+            } else {
+              ctx.fillRect(-p.r, -p.r * 0.5, p.r * 2, p.r);
+            }
+            ctx.restore();
+            break;
+          case 'hearts':
+            ctx.globalAlpha = 0.55 + 0.35 * Math.sin(p.t);
+            ctx.fillStyle = '#ff6fc1';
+            ctx.font = `${Math.round(p.r * 5 + 6)}px sans-serif`;
+            ctx.fillText('♥', p.x, p.y);
+            break;
+          case 'embers':
+            ctx.globalAlpha = 0.3 + 0.7 * Math.max(0, Math.sin(p.t * 1.7));
+            dot(p.x, p.y, p.r * 0.6, p.s > 1.3 ? '#9b4dff' : '#ff8a3d', true);
+            break;
+        }
+      }
+
+      function draw(now){
+        ctx.clearRect(0, 0, W, H);
+        const light = document.documentElement.dataset.theme === 'light';
+        // Ultra: additive blending makes overlapping glows bloom
+        ctx.globalCompositeOperation = getGraphics() === 'ultra' && !light ? 'lighter' : 'source-over';
+        for (const p of particles){
+          if (!reduceMotion) move(p);
+          drawParticle(p, light);
         }
 
         // the odd shooting star at night
-        if (phase === 'night' && !reduceMotion){
+        if (kind === 'night' && !reduceMotion){
           if (!shooting && now > nextShootAt){
             shooting = { x: Math.random() * W * 0.7, y: Math.random() * H * 0.4, life: 0 };
           }
@@ -2090,6 +2491,7 @@
           }
         }
         ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
       }
 
       function loop(now){
@@ -2115,6 +2517,7 @@
           running = true;
           resize();
           phase = null;
+          holiday = null;
           updatePhase();
           phaseTimer = setInterval(updatePhase, 60000);
           panelObserver.observe(panelEl);
@@ -2132,14 +2535,123 @@
           window.removeEventListener('pointermove', followPointer);
           ctx.clearRect(0, 0, W, H);
           delete document.documentElement.dataset.phase;
+          delete document.documentElement.dataset.holiday;
           eyes.forEach(eye => { eye.style.translate = ''; });
           shooting = null;
           Pet.stop();
+        },
+        // High <-> Ultra changes the particle count without a restart
+        refresh(){
+          if (!running) return;
+          makeParticles();
+          if (reduceMotion) draw(0);
         }
       };
     })();
 
-    if (getGraphics() === 'high') HighGfx.start();
+    // -----------------------------------------------------------
+    // Ultra graphics: everything in High, plus a 3D parallax tilt.
+    // The pointer (or tilting a phone) sets --px / --py on <html>,
+    // eased toward the target every frame; CSS turns those into a
+    // slight panel rotation, layers that drift at different depths
+    // and a moving light sheen. Off with prefers-reduced-motion.
+    // -----------------------------------------------------------
+    const Ultra = (() => {
+      const root = document.documentElement;
+      let running = false, raf = null;
+      let tx = 0, ty = 0, x = 0, y = 0;
+
+      const clamp = (v) => Math.max(-1, Math.min(1, v));
+
+      function onPointer(e){
+        tx = clamp((e.clientX / window.innerWidth) * 2 - 1);
+        ty = clamp((e.clientY / window.innerHeight) * 2 - 1);
+      }
+
+      function onTilt(e){
+        if (e.gamma === null || e.beta === null) return;
+        tx = clamp(e.gamma / 25);
+        ty = clamp((e.beta - 45) / 25); // ~45deg is how a phone is usually held
+      }
+
+      function frame(){
+        x += (tx - x) * 0.08;
+        y += (ty - y) * 0.08;
+        root.style.setProperty('--px', x.toFixed(3));
+        root.style.setProperty('--py', y.toFixed(3));
+        raf = requestAnimationFrame(frame);
+      }
+
+      return {
+        start(){
+          if (running || reduceMotion) return;
+          running = true;
+          window.addEventListener('pointermove', onPointer, { passive: true });
+          window.addEventListener('deviceorientation', onTilt);
+          raf = requestAnimationFrame(frame);
+        },
+        stop(){
+          if (!running) return;
+          running = false;
+          cancelAnimationFrame(raf);
+          window.removeEventListener('pointermove', onPointer);
+          window.removeEventListener('deviceorientation', onTilt);
+          tx = ty = x = y = 0;
+          root.style.removeProperty('--px');
+          root.style.removeProperty('--py');
+        },
+        // iOS only hands out tilt data after asking, from a tap
+        askForTilt(){
+          if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function'){
+            DeviceOrientationEvent.requestPermission().catch(() => {});
+          }
+        }
+      };
+    })();
+
+    // -----------------------------------------------------------
+    // Trophies earned just by visiting (see achievements.js)
+    // -----------------------------------------------------------
+    (function visitTrophies(){
+      if (!window.R632Ach) return;
+      R632Ach.unlock('powered_on');
+      const hour = new Date().getHours();
+      if (hour < 5) R632Ach.unlock('night_owl');
+      else if (hour < 7) R632Ach.unlock('early_bird');
+    })();
+
+    if (getGraphics() !== 'low') HighGfx.start();
+    if (getGraphics() === 'ultra') Ultra.start();
+
+    // -----------------------------------------------------------
+    // Frame-rate check for automatic High: watch a few seconds of
+    // frames (skipping the first, busy one); if the device averages
+    // under ~40 fps, drop to Low quietly and remember that for next
+    // time. Only for an automatic pick -- a hand-picked High stays.
+    // -----------------------------------------------------------
+    (function autoGraphicsCheck(){
+      const root = document.documentElement;
+      if (root.dataset.graphicsAuto !== 'true' || getGraphics() !== 'high') return;
+      const MIN_FPS = 40, SKIP_MS = 1000, SAMPLE_MS = 4000;
+      let start = null, frames = 0;
+      function frame(now){
+        if (root.dataset.graphicsAuto !== 'true') return; // picked by hand meanwhile
+        if (document.hidden){ requestAnimationFrame(frame); return; }
+        if (start === null) start = now;
+        const t = now - start;
+        if (t >= SKIP_MS) frames++;
+        if (t < SKIP_MS + SAMPLE_MS){ requestAnimationFrame(frame); return; }
+        const fps = frames / (SAMPLE_MS / 1000);
+        if (fps < MIN_FPS){
+          try { localStorage.setItem('robot632_graphics_auto', 'low'); } catch (e){}
+          root.dataset.graphics = 'low';
+          renderButtons();
+          HighGfx.stop();
+          if (!settingsPop.hidden) syncSettings();
+        }
+      }
+      requestAnimationFrame(frame);
+    })();
   </script>
 
 <style>
