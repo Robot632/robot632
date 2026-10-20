@@ -17,12 +17,11 @@
     // Low on weaker devices so it stays smooth, High on capable ones.
     // A device that was auto-put on High but couldn't keep up gets
     // remembered as Low (robot632_graphics_auto, see the frame-rate
-    // check further down). Ultra is only ever picked by hand.
-    // Ultra is High plus extras, so it sets data-graphics="high" too
-    // and adds data-ultra on top.
+    // check further down).
     var root = document.documentElement;
     var g = localStorage.getItem('robot632_graphics');
-    if (g !== 'low' && g !== 'high' && g !== 'ultra'){
+    if (g === 'ultra') g = 'high'; // Ultra no longer exists; it was High plus extras
+    if (g !== 'low' && g !== 'high'){
       root.dataset.graphicsAuto = 'true';
       g = localStorage.getItem('robot632_graphics_auto');
       if (g !== 'low'){
@@ -35,8 +34,7 @@
         g = weak ? 'low' : 'high';
       }
     }
-    root.dataset.graphics = (g === 'high' || g === 'ultra') ? 'high' : 'low';
-    if (g === 'ultra') root.dataset.ultra = 'true';
+    root.dataset.graphics = g === 'high' ? 'high' : 'low';
   })();
 </script>
 <script src="achievements.js"></script>
@@ -371,9 +369,7 @@
     height:11px;
     border-radius:50%;
     background: radial-gradient(circle at 35% 30%, #ffffff, var(--icon-front) 45%, var(--icon-side) 85%);
-    box-shadow:
-      0 0 6px rgba(255,255,255,0.6),
-      inset -2px -2px 3px rgba(0,0,0,0.3);
+    box-shadow: inset -2px -2px 3px rgba(0,0,0,0.3);
   }
 
   .wordmark{
@@ -610,17 +606,6 @@
   }
   html[data-graphics="high"] .phase-label{ display:block; }
 
-  /* the antenna light glows softly while awake */
-  @keyframes antenna-glow{
-    0%, 100%{ box-shadow: inset -2px -3px 4px rgba(0,0,0,0.35), 0 0 4px 1px rgba(255,255,255,0.25); }
-    50%{ box-shadow: inset -2px -3px 4px rgba(0,0,0,0.35), 0 0 12px 4px rgba(255,255,255,0.6); }
-  }
-  html[data-graphics="high"]:not([data-phase="night"]) .bot-icon .antenna::after{
-    animation: antenna-glow 2.4s ease-in-out infinite;
-  }
-  html[data-graphics="high"][data-phase="evening"] .bot-icon .eye{
-    box-shadow: 0 0 9px 2px rgba(255,170,80,0.85), inset -2px -2px 3px rgba(0,0,0,0.3);
-  }
   html[data-graphics="high"] .bot-icon .eye{ transition: translate 0.12s ease-out; }
   /* asleep: eyes squeezed shut (uses `scale`, so it doesn't fight the
      blink animation, which uses `transform`) */
@@ -1010,7 +995,6 @@
   }
   html[data-holiday="halloween"] .bot-icon .eye{
     background: radial-gradient(circle at 35% 30%, #fff1c8, #ffb15c 45%, #ff7a1a 85%);
-    box-shadow: 0 0 10px 3px rgba(255,140,30,0.9);
   }
 
   /* mărțișor: red-and-white string hanging off the antenna */
@@ -1038,53 +1022,10 @@
     background: radial-gradient(circle at 50% 45%, #ffffff 0 2px, #e2242b 3px);
   }
 
-  /* ---- Ultra graphics: data-ultra on <html>, --px/--py set by JS (-1..1) ---- */
-  html[data-ultra="true"] body{ perspective: 1400px; }
-  html[data-ultra="true"] .panel{
-    transform: rotateX(calc(var(--py, 0) * -2.5deg)) rotateY(calc(var(--px, 0) * 3.5deg));
-  }
-  html[data-ultra="true"] .title-row{ translate: calc(var(--px, 0) * 16px) calc(var(--py, 0) * 10px); }
-  html[data-ultra="true"] .tagline{ translate: calc(var(--px, 0) * 9px) calc(var(--py, 0) * 6px); }
-  html[data-ultra="true"] .visit-counter,
-  html[data-ultra="true"] .phase-label{ translate: calc(var(--px, 0) * 6px) calc(var(--py, 0) * 4px); }
-  html[data-ultra="true"] .buttons{ translate: calc(var(--px, 0) * 4px) calc(var(--py, 0) * 3px); }
-  /* a soft light sheen that slides across the panel */
-  html[data-ultra="true"] .panel::after{
-    content:'';
-    position:absolute;
-    inset:0;
-    border-radius:inherit;
-    pointer-events:none;
-    background: radial-gradient(520px circle at calc(50% + var(--px, 0) * 40%) calc(40% + var(--py, 0) * 40%), rgba(255,255,255,0.09), transparent 60%);
-  }
-  html[data-ultra="true"] .wordmark span{
-    text-shadow: 0 2px 6px var(--text-shadow), 0 0 18px rgba(255,255,255,0.35);
-  }
-  html[data-ultra="true"] .bot-icon{
-    filter: drop-shadow(0 10px 14px rgba(0,0,0,0.28)) drop-shadow(0 0 16px rgba(255,255,255,0.18));
-  }
-  html[data-ultra="true"]:not([data-phase="night"]):not([data-phase="evening"]):not([data-holiday="halloween"]) .bot-icon .eye{
-    box-shadow: 0 0 12px 4px rgba(255,255,255,0.85), inset -2px -2px 3px rgba(0,0,0,0.3);
-  }
-  html[data-ultra="true"] .btn{
-    box-shadow:
-      inset 0 2px 0 rgba(255,255,255,0.55),
-      inset 0 -4px 8px rgba(0,0,0,0.22),
-      0 6px 0 color-mix(in srgb, var(--btn-color, var(--pink)) 55%, black),
-      0 11px 18px rgba(0,0,0,0.32),
-      0 0 28px color-mix(in srgb, var(--btn-color, var(--pink)) 55%, transparent);
-  }
-  html[data-ultra="true"] .btn:active{
-    box-shadow:
-      inset 0 3px 8px rgba(0,0,0,0.4),
-      0 0 0 color-mix(in srgb, var(--btn-color, var(--pink)) 55%, black),
-      0 0 22px color-mix(in srgb, var(--btn-color, var(--pink)) 45%, transparent);
-  }
 
   @media (prefers-reduced-motion: reduce){
     .bot-zzz span, .bot-mug span, .pet.walking .pet-tread,
-    .pet.walking .pet-body, .pet.walking .pet-eyes,
-    html[data-graphics="high"] .bot-icon .antenna::after{ animation:none; }
+    .pet.walking .pet-body, .pet.walking .pet-eyes{ animation:none; }
     .bot-zzz span{ opacity:0.8; }
     .bot-zzz span:nth-child(2){ translate: 7px -12px; }
     .bot-zzz span:nth-child(3){ translate: 14px -26px; }
@@ -1116,7 +1057,6 @@
         <div class="seg" role="radiogroup" aria-labelledby="graphics-label">
           <button type="button" role="radio" data-graphics="low">Low</button>
           <button type="button" role="radio" data-graphics="high">High</button>
-          <button type="button" role="radio" data-graphics="ultra">Ultra</button>
         </div>
       </div>
       <p class="settings-note" id="settings-note"></p>
@@ -1213,7 +1153,7 @@
     // Material Icons, Apache License 2.0).
     const SETTINGS_ICON = 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z';
 
-    // graphics: 'high' entries only render while High (or Ultra) is on.
+    // graphics: 'high' entries only render while High graphics is on.
     const BUTTONS = [
       { label: 'Roblox',  href: 'roblox.html', color: 'var(--roblox-red)', visible: true  },
       { label: 'About',   href: '#',           color: 'var(--orange)',     visible: false },
@@ -1321,7 +1261,7 @@
       const container = document.getElementById('buttons');
       container.innerHTML = BUTTONS
         .filter(b => b.visible !== false)
-        .filter(b => !b.graphics || getGraphics() !== 'low') // graphics: 'high' = High or Ultra
+        .filter(b => !b.graphics || b.graphics === getGraphics())
         .map(b => `
           <a class="btn" style="--btn-color:${b.color}" href="${b.href}">${b.label}</a>
         `).join('');
@@ -1443,36 +1383,24 @@
     // and starts/stops the High extras (HighGfx, further down).
     // -----------------------------------------------------------
     const GRAPHICS_KEY = 'robot632_graphics';
-    const GRAPHICS_MODES = ['low', 'high', 'ultra'];
     const GRAPHICS_NOTES = {
       low: 'The classic Robot632 look. Lightest on battery.',
-      high: 'Particles that follow your clock, holiday outfits, a sleepy (or caffeinated) robot, eyes that follow you, and Pip the pet robot.',
-      ultra: 'Everything in High, plus 3D parallax that follows your mouse (or tilting your phone), extra glow and almost twice the particles.'
+      high: 'Particles that follow your clock, holiday outfits, a sleepy (or caffeinated) robot, eyes that follow you, and Pip the pet robot.'
     };
 
     function getGraphics(){
-      const root = document.documentElement;
-      if (root.dataset.graphics !== 'high') return 'low';
-      return root.dataset.ultra === 'true' ? 'ultra' : 'high';
+      return document.documentElement.dataset.graphics === 'high' ? 'high' : 'low';
     }
 
     function applyGraphics(mode){
       const root = document.documentElement;
-      const was = getGraphics();
       delete root.dataset.graphicsAuto; // a hand-picked setting replaces the automatic one
-      root.dataset.graphics = mode === 'low' ? 'low' : 'high';
-      if (mode === 'ultra') root.dataset.ultra = 'true'; else delete root.dataset.ultra;
+      root.dataset.graphics = mode;
       localStorage.setItem(GRAPHICS_KEY, mode);
       renderButtons();
       syncSettings();
-      if (mode === 'low') HighGfx.stop();
-      else if (was === 'low') HighGfx.start();
-      else HighGfx.refresh();
-      if (mode === 'ultra') Ultra.start(); else Ultra.stop();
-      if (window.R632Ach){
-        if (mode !== 'low') R632Ach.unlock('high_graphics');
-        if (mode === 'ultra') R632Ach.unlock('ultra_graphics');
-      }
+      if (mode === 'high') HighGfx.start(); else HighGfx.stop();
+      if (mode === 'high' && window.R632Ach) R632Ach.unlock('high_graphics');
     }
 
     const settingsPop = document.getElementById('settings-pop');
@@ -1514,19 +1442,15 @@
 
     settingsPop.querySelectorAll('[data-graphics]').forEach(b => {
       b.addEventListener('click', () => {
-        if (b.dataset.graphics === 'ultra') Ultra.askForTilt(); // needs this tap on iOS
         if (b.dataset.graphics !== getGraphics()) applyGraphics(b.dataset.graphics);
       });
     });
 
-    // arrow keys move between Low / High / Ultra, like a normal radio group
+    // arrow keys move between Low / High, like a normal radio group
     settingsPop.addEventListener('keydown', (e) => {
-      const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1
-                 : (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? -1 : 0;
-      if (!step || !e.target.closest('.seg')) return;
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) || !e.target.closest('.seg')) return;
       e.preventDefault();
-      const i = GRAPHICS_MODES.indexOf(getGraphics());
-      applyGraphics(GRAPHICS_MODES[(i + step + GRAPHICS_MODES.length) % GRAPHICS_MODES.length]);
+      applyGraphics(getGraphics() === 'high' ? 'low' : 'high');
       settingsPop.querySelector('[aria-checked="true"]').focus();
     });
 
@@ -2155,8 +2079,7 @@
 
       function makeParticles(){
         const base = FX_COUNTS[kind] || PHASES[phase].count;
-        const n = Math.round(base * (getGraphics() === 'ultra' ? 1.8 : 1));
-        particles = Array.from({ length: n }, () => {
+        particles = Array.from({ length: base }, () => {
           const p = {
             x: Math.random() * W,
             y: Math.random() * H,
@@ -2281,8 +2204,6 @@
       function draw(now){
         ctx.clearRect(0, 0, W, H);
         const light = document.documentElement.dataset.theme === 'light';
-        // Ultra: additive blending makes overlapping glows bloom
-        ctx.globalCompositeOperation = getGraphics() === 'ultra' && !light ? 'lighter' : 'source-over';
         for (const p of particles){
           if (!reduceMotion) move(p);
           drawParticle(p, light);
@@ -2316,7 +2237,6 @@
           }
         }
         ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = 'source-over';
       }
 
       function loop(now){
@@ -2364,72 +2284,6 @@
           eyes.forEach(eye => { eye.style.translate = ''; });
           shooting = null;
           Pet.stop();
-        },
-        // High <-> Ultra changes the particle count without a restart
-        refresh(){
-          if (!running) return;
-          makeParticles();
-          if (reduceMotion) draw(0);
-        }
-      };
-    })();
-
-    // -----------------------------------------------------------
-    // Ultra graphics: everything in High, plus a 3D parallax tilt.
-    // The pointer (or tilting a phone) sets --px / --py on <html>,
-    // eased toward the target every frame; CSS turns those into a
-    // slight panel rotation, layers that drift at different depths
-    // and a moving light sheen. Off with prefers-reduced-motion.
-    // -----------------------------------------------------------
-    const Ultra = (() => {
-      const root = document.documentElement;
-      let running = false, raf = null;
-      let tx = 0, ty = 0, x = 0, y = 0;
-
-      const clamp = (v) => Math.max(-1, Math.min(1, v));
-
-      function onPointer(e){
-        tx = clamp((e.clientX / window.innerWidth) * 2 - 1);
-        ty = clamp((e.clientY / window.innerHeight) * 2 - 1);
-      }
-
-      function onTilt(e){
-        if (e.gamma === null || e.beta === null) return;
-        tx = clamp(e.gamma / 25);
-        ty = clamp((e.beta - 45) / 25); // ~45deg is how a phone is usually held
-      }
-
-      function frame(){
-        x += (tx - x) * 0.08;
-        y += (ty - y) * 0.08;
-        root.style.setProperty('--px', x.toFixed(3));
-        root.style.setProperty('--py', y.toFixed(3));
-        raf = requestAnimationFrame(frame);
-      }
-
-      return {
-        start(){
-          if (running || reduceMotion) return;
-          running = true;
-          window.addEventListener('pointermove', onPointer, { passive: true });
-          window.addEventListener('deviceorientation', onTilt);
-          raf = requestAnimationFrame(frame);
-        },
-        stop(){
-          if (!running) return;
-          running = false;
-          cancelAnimationFrame(raf);
-          window.removeEventListener('pointermove', onPointer);
-          window.removeEventListener('deviceorientation', onTilt);
-          tx = ty = x = y = 0;
-          root.style.removeProperty('--px');
-          root.style.removeProperty('--py');
-        },
-        // iOS only hands out tilt data after asking, from a tap
-        askForTilt(){
-          if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function'){
-            DeviceOrientationEvent.requestPermission().catch(() => {});
-          }
         }
       };
     })();
@@ -2445,8 +2299,7 @@
       else if (hour < 7) R632Ach.unlock('early_bird');
     })();
 
-    if (getGraphics() !== 'low') HighGfx.start();
-    if (getGraphics() === 'ultra') Ultra.start();
+    if (getGraphics() === 'high') HighGfx.start();
 
     // -----------------------------------------------------------
     // Frame-rate check for automatic High: watch a few seconds of
