@@ -1988,6 +1988,24 @@
         },
         closeBubble(e){
           if (bubble && !bubble.hidden && !bubble.contains(e.target) && !el.contains(e.target)) bubble.hidden = true;
+        },
+        // ---- hooks for the owner's private debug tool (not part of the site) ----
+        info(){
+          if (!el) load();
+          return { fuel, eaten, tier: tier(), running: !!el };
+        },
+        debugSet(values){
+          if (!el) load();
+          if (typeof values.fuel === 'number') fuel = Math.max(0, Math.min(100, values.fuel));
+          if (typeof values.eaten === 'number') eaten = Math.max(0, Math.floor(values.eaten));
+          save();
+          if (el){
+            el.dataset.tier = tier();
+            updateBubble();
+          }
+        },
+        debugDrop(){
+          if (el) dropSnack({ stopPropagation(){} });
         }
       };
     })();
@@ -2055,6 +2073,9 @@
       let nextShootAt = 0;
       let raf = null, phaseTimer = null;
       let W = 0, H = 0;
+      // debug panel overrides: phase null = follow the clock; holiday
+      // null = follow the date, 'none' = no holiday, or a holiday id
+      const override = { phase: null, holiday: null };
 
       function phaseFor(hour){
         if (hour >= 22 || hour < 6) return 'night';
@@ -2102,8 +2123,10 @@
 
       function updatePhase(){
         const now = new Date();
-        const p = phaseFor(now.getHours());
-        const h = holidayFor(now);
+        const p = override.phase || phaseFor(now.getHours());
+        const h = override.holiday === 'none' ? null
+                : override.holiday ? HOLIDAYS.find(x => x.id === override.holiday) || null
+                : holidayFor(now);
         if (p === phase && h === holiday) return;
         phase = p;
         holiday = h;
@@ -2112,7 +2135,7 @@
         root.dataset.phase = p;
         if (h){
           root.dataset.holiday = h.id;
-          if (window.R632Ach) R632Ach.unlock('holiday');
+          if (window.R632Ach && !override.holiday) R632Ach.unlock('holiday');
         } else {
           delete root.dataset.holiday;
         }
@@ -2284,6 +2307,16 @@
           eyes.forEach(eye => { eye.style.translate = ''; });
           shooting = null;
           Pet.stop();
+        },
+        // ---- hooks for the owner's private debug tool (not part of the site) ----
+        HOLIDAY_IDS: HOLIDAYS.map(h => h.id),
+        getOverride: () => ({ ...override }),
+        setOverride(values){
+          Object.assign(override, values);
+          if (running){
+            phase = null; // force updatePhase() to re-apply
+            updatePhase();
+          }
         }
       };
     })();
