@@ -1004,7 +1004,6 @@
   .bot-hat, .bot-pumpkin, .bot-martisor{ display:none; }
   html[data-holiday="christmas"] .bot-hat,
   html[data-holiday="newyear"] .bot-hat,
-  html[data-holiday="birthday"] .bot-hat,
   html[data-holiday="halloween"] .bot-pumpkin,
   html[data-holiday="martisor"] .bot-martisor{ display:block; }
 
@@ -1046,16 +1045,13 @@
     border-radius:50%;
     background: radial-gradient(circle at 35% 30%, #fff, #dfe4e8);
   }
-  /* party hat for new year / birthday: striped cone, no fur trim */
-  html[data-holiday="newyear"] .hat-cone,
-  html[data-holiday="birthday"] .hat-cone{
+  /* party hat for new year: striped cone, no fur trim */
+  html[data-holiday="newyear"] .hat-cone{
     clip-path: polygon(50% 0, 85% 100%, 15% 100%);
     background: repeating-linear-gradient(135deg, #ff6fc1 0 5px, #2f6fed 5px 10px, #ffd65a 10px 15px);
   }
-  html[data-holiday="newyear"] .hat-trim,
-  html[data-holiday="birthday"] .hat-trim{ display:none; }
-  html[data-holiday="newyear"] .hat-pom,
-  html[data-holiday="birthday"] .hat-pom{ left:18px; background: radial-gradient(circle at 35% 30%, #fff6c8, #ffd65a); }
+  html[data-holiday="newyear"] .hat-trim{ display:none; }
+  html[data-holiday="newyear"] .hat-pom{ left:18px; background: radial-gradient(circle at 35% 30%, #fff6c8, #ffd65a); }
 
   .bot-pumpkin{
     position:absolute;
@@ -2235,7 +2231,7 @@
     // Holidays (HOLIDAYS below) take over the particles and dress
     // the bot up (data-holiday on <html>, styled in CSS). Preview
     // one any day with ?holiday=halloween (or christmas, newyear,
-    // valentine, martisor, birthday) in the URL.
+    // valentine, martisor) in the URL.
     // -----------------------------------------------------------
     const HOLIDAYS = [
       { id: 'christmas', label: '🎄 merry christmas from robot632!', from: [12, 20], to: [12, 30], fx: 'snow' },
@@ -2244,20 +2240,14 @@
       { id: 'martisor',  label: '🌸 happy mărțișor!',                from: [3, 1],   to: [3, 7],   fx: 'petals' },
       { id: 'halloween', label: '🎃 happy halloween!',               from: [10, 25], to: [10, 31], fx: 'embers' }
     ];
-    // Robot632's birthday: set it like { month: 5, day: 17 } to get a
-    // party hat and confetti on that day. null = no birthday party.
-    const BIRTHDAY = null;
-    const BIRTHDAY_HOLIDAY = { id: 'birthday', label: "🎂 it's robot632's birthday!", fx: 'confetti' };
 
     function holidayFor(date){
       const preview = new URLSearchParams(location.search).get('holiday');
       if (preview){
-        if (preview === 'birthday') return BIRTHDAY_HOLIDAY;
         const h = HOLIDAYS.find(x => x.id === preview);
         if (h) return h;
       }
       const m = date.getMonth() + 1, d = date.getDate();
-      if (BIRTHDAY && BIRTHDAY.month === m && BIRTHDAY.day === d) return BIRTHDAY_HOLIDAY;
       const v = m * 100 + d;
       return HOLIDAYS.find(h => {
         const a = h.from[0] * 100 + h.from[1], b = h.to[0] * 100 + h.to[1];
