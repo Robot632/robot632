@@ -24,6 +24,7 @@
     { id: 'high_graphics',  icon: '✨', title: 'Eye candy',               desc: 'Turn on High graphics.' },
     { id: 'holiday',        icon: '🎉', title: 'Festive bot',             desc: 'Visit on a holiday with High graphics on.' },
     { id: 'roblox',         icon: '🎮', title: 'Blocky',                  desc: 'Check out the Roblox page.' },
+    { id: 'roblox_play',    icon: '▶️', title: 'Player one',              desc: 'Open one of the games from the Roblox page.' },
     { id: 'terminal',       icon: '⌨️', title: 'Hacker voice',            desc: 'Find the terminal.', secret: true },
     { id: 'corner',         icon: '📡', title: 'Signal found',            desc: 'Find the hidden corner page.', secret: true },
     { id: 'sudo',           icon: '💥', title: 'Oops',                    desc: 'Try to delete everything.', secret: true },
