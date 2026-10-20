@@ -12,6 +12,10 @@
     var saved = localStorage.getItem('robot632_theme');
     var preferred = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     document.documentElement.dataset.theme = preferred;
+    // same idea for the graphics setting: "low" (the classic page)
+    // unless the visitor picked "high" in settings before
+    document.documentElement.dataset.graphics =
+      localStorage.getItem('robot632_graphics') === 'high' ? 'high' : 'low';
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -532,11 +536,421 @@
     letter-spacing: 0.02em;
   }
 
+  /* -----------------------------------------------------------
+     Settings: a gear in the socials row opens a small popover.
+     Right now it holds one setting, graphics: Low (default, the
+     classic page) or High (everything under "High graphics" below).
+  ------------------------------------------------------------ */
+  .settings-toggle{
+    background:none;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    font: inherit;
+  }
+  .settings-toggle svg{ height:20px; transition: transform 0.4s ease; }
+  .settings-toggle[aria-expanded="true"] svg{ transform: rotate(90deg); }
+
+  .settings-pop{
+    position:absolute;
+    top: clamp(44px, 7vh, 52px);
+    right: clamp(18px, 5vw, 30px);
+    z-index:20;
+    width: min(270px, calc(100% - 36px));
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--bg-deep);
+    border: 2px solid var(--panel-border);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+    text-align:left;
+  }
+  .settings-pop[hidden]{ display:none; }
+  .settings-title{
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin: 0 0 12px;
+  }
+  .settings-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+  }
+  .settings-label{ font-weight:800; font-size:15px; }
+  .seg{
+    display:flex;
+    padding:3px;
+    border-radius: 12px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-line);
+  }
+  .seg button{
+    border:none;
+    background:none;
+    color: var(--text);
+    font: 800 14px 'Nunito', sans-serif;
+    padding: 7px 13px;
+    border-radius: 9px;
+    cursor:pointer;
+    opacity: 0.7;
+  }
+  .seg button[aria-checked="true"]{
+    opacity:1;
+    color:#fff;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--blue) 75%, white), var(--blue) 50%, color-mix(in srgb, var(--blue) 80%, black));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 0 color-mix(in srgb, var(--blue) 55%, black);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .settings-note{
+    margin: 12px 0 0;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+    opacity: 0.8;
+  }
+
+  /* -----------------------------------------------------------
+     High graphics. Everything below only applies while
+     <html data-graphics="high">, so Low looks exactly like the
+     page always did.
+       - the sky follows the visitor's clock (night / morning /
+         day / evening) with particles drawn on #fx-canvas
+       - the bot sleeps at night and has a coffee in the morning
+       - the bot's eyes follow the pointer
+       - Pip, a little pet robot that walks along the bottom of
+         the panel and wants to be fed bolts
+       - a Games button (see BUTTONS)
+  ------------------------------------------------------------ */
+  /* the canvas sits inside the panel, behind its content: the
+     panel becomes a stacking context (z-index:1), so z-index:-1
+     paints above the panel's own background but under the text */
+  #fx-canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    z-index:-1;
+    display:none;
+  }
+  html[data-graphics="high"] #fx-canvas{ display:block; }
+  html[data-graphics="high"] .panel{
+    z-index:1;
+    background-image: var(--sky);
+  }
+  html[data-graphics="high"] body::after{
+    content:'';
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background: var(--sky);
+  }
+
+  html[data-graphics="high"]{ --sky: none; }
+  html[data-graphics="high"][data-phase="night"]{ --sky: linear-gradient(180deg, rgba(8,12,48,0.55), rgba(20,10,60,0.25)); }
+  html[data-graphics="high"][data-phase="morning"]{ --sky: linear-gradient(180deg, rgba(255,196,120,0.28), rgba(255,140,170,0.08)); }
+  html[data-graphics="high"][data-phase="day"]{ --sky: linear-gradient(180deg, rgba(120,210,255,0.16), transparent 70%); }
+  html[data-graphics="high"][data-phase="evening"]{ --sky: linear-gradient(180deg, rgba(255,120,60,0.3), rgba(120,40,140,0.22)); }
+  /* softer tints in the light theme so the dark text stays readable */
+  html[data-theme="light"][data-graphics="high"][data-phase="night"]{ --sky: linear-gradient(180deg, rgba(40,50,130,0.22), rgba(90,60,150,0.08)); }
+  html[data-theme="light"][data-graphics="high"][data-phase="evening"]{ --sky: linear-gradient(180deg, rgba(255,120,60,0.2), rgba(150,60,160,0.1)); }
+
+  .phase-label{
+    display:none;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text);
+    opacity: 0.75;
+    margin: -14px 0 0;
+    text-shadow: 0 1px 4px var(--text-shadow);
+  }
+  html[data-graphics="high"] .phase-label{ display:block; }
+
+  /* the antenna light glows softly while awake */
+  @keyframes antenna-glow{
+    0%, 100%{ box-shadow: inset -2px -3px 4px rgba(0,0,0,0.35), 0 0 4px 1px rgba(255,255,255,0.25); }
+    50%{ box-shadow: inset -2px -3px 4px rgba(0,0,0,0.35), 0 0 12px 4px rgba(255,255,255,0.6); }
+  }
+  html[data-graphics="high"]:not([data-phase="night"]) .bot-icon .antenna::after{
+    animation: antenna-glow 2.4s ease-in-out infinite;
+  }
+  html[data-graphics="high"][data-phase="evening"] .bot-icon .eye{
+    box-shadow: 0 0 9px 2px rgba(255,170,80,0.85), inset -2px -2px 3px rgba(0,0,0,0.3);
+  }
+  html[data-graphics="high"] .bot-icon .eye{ transition: translate 0.12s ease-out; }
+  /* asleep: eyes squeezed shut (uses `scale`, so it doesn't fight the
+     blink animation, which uses `transform`) */
+  html[data-graphics="high"][data-phase="night"] .bot-icon .eye{
+    scale: 1 0.14;
+    box-shadow: none;
+    translate: 0 2px;
+  }
+
+  .bot-zzz, .bot-mug{ display:none; }
+  html[data-graphics="high"][data-phase="night"] .bot-zzz{ display:block; }
+  html[data-graphics="high"][data-phase="morning"] .bot-mug{ display:block; }
+
+  .bot-zzz{
+    position:absolute;
+    top:-14px;
+    right:-10px;
+    width:30px;
+    height:40px;
+    pointer-events:none;
+  }
+  .bot-zzz span{
+    position:absolute;
+    bottom:0;
+    left:0;
+    font: 800 13px 'Nunito', sans-serif;
+    color: var(--text);
+    opacity:0;
+    animation: zzz-float 3s ease-in infinite;
+  }
+  .bot-zzz span:nth-child(2){ animation-delay: 1s; font-size:16px; }
+  .bot-zzz span:nth-child(3){ animation-delay: 2s; font-size:19px; }
+  @keyframes zzz-float{
+    0%{ opacity:0; translate: 0 0; }
+    20%{ opacity:0.9; }
+    100%{ opacity:0; translate: 18px -34px; }
+  }
+
+  /* a little oil-coffee mug next to the bot in the morning */
+  .bot-mug{
+    position:absolute;
+    right:-24px;
+    bottom:-2px;
+    width:17px;
+    height:15px;
+    border-radius: 2px 2px 6px 6px;
+    background: linear-gradient(90deg, #f6f7f8, var(--icon-front) 50%, var(--icon-side));
+    box-shadow: inset 0 3px 0 #5a3a22, 0 3px 5px rgba(0,0,0,0.3);
+  }
+  .bot-mug::after{
+    content:'';
+    position:absolute;
+    right:-6px;
+    top:3px;
+    width:6px;
+    height:7px;
+    border: 2px solid var(--icon-side);
+    border-left:none;
+    border-radius: 0 5px 5px 0;
+  }
+  .bot-mug span{
+    position:absolute;
+    bottom:16px;
+    width:3px;
+    height:10px;
+    border-radius:3px;
+    background: rgba(255,255,255,0.6);
+    opacity:0;
+    animation: steam 2.2s ease-out infinite;
+  }
+  .bot-mug span:nth-child(1){ left:3px; }
+  .bot-mug span:nth-child(2){ left:9px; animation-delay: 1.1s; }
+  @keyframes steam{
+    0%{ opacity:0; translate: 0 2px; scale: 1 0.6; }
+    30%{ opacity:0.8; }
+    100%{ opacity:0; translate: 3px -12px; scale: 1 1.3; }
+  }
+
+  /* ---- Pip, the pet robot ---- */
+  .pet{
+    position:absolute;
+    left:0;
+    bottom: 34px;
+    width:40px;
+    height:42px;
+    padding:0;
+    border:none;
+    background:none;
+    cursor:pointer;
+    z-index:4;
+    will-change: translate;
+  }
+  .pet-inner{
+    position:absolute;
+    inset:0;
+    scale: var(--dir, 1) 1;
+  }
+  .pet-neck{
+    position:absolute;
+    left:18px;
+    top:10px;
+    width:4px;
+    height:8px;
+    background: var(--icon-dark);
+  }
+  .pet-eyes{
+    position:absolute;
+    top:0;
+    left:9px;
+    display:flex;
+    gap:2px;
+    transition: translate 0.3s ease, rotate 0.3s ease;
+  }
+  .pet-eye{
+    position:relative;
+    width:12px;
+    height:11px;
+    border-radius: 5px 6px 4px 4px;
+    background: linear-gradient(160deg, #f2f3f5, var(--icon-front) 45%, var(--icon-side));
+    box-shadow: inset 0 -2px 2px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .pet-eye::after{
+    content:'';
+    position:absolute;
+    top:3px;
+    right:2px;
+    width:5px;
+    height:5px;
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #9fd4ff, #1d2a3a 60%);
+    transition: scale 0.2s ease;
+  }
+  .pet-body{
+    position:absolute;
+    top:16px;
+    left:6px;
+    width:28px;
+    height:18px;
+    border-radius:4px;
+    background: linear-gradient(180deg, #f6cd62, #dca032 65%, #a9741f);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 4px rgba(0,0,0,0.25);
+  }
+  .pet-body::before{
+    content:'';
+    position:absolute;
+    left:5px;
+    top:6px;
+    width:18px;
+    height:4px;
+    border-radius:2px;
+    background: rgba(0,0,0,0.22);
+  }
+  .pet-tread{
+    position:absolute;
+    left:2px;
+    bottom:0;
+    width:36px;
+    height:9px;
+    border-radius:5px;
+    background: repeating-linear-gradient(90deg, #2f3238 0 4px, #4b525c 4px 7px);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.35);
+  }
+  @keyframes tread-roll{ to{ background-position: 14px 0; } }
+  @keyframes pet-bob{ 0%, 100%{ translate: 0 0; } 50%{ translate: 0 -1.5px; } }
+  .pet.walking .pet-tread{ animation: tread-roll 0.35s linear infinite; }
+  .pet.walking .pet-body,
+  .pet.walking .pet-eyes{ animation: pet-bob 0.3s ease-in-out infinite; }
+  .pet[data-mood="hungry"] .pet-eyes{ rotate: 8deg; translate: 0 2px; }
+  .pet[data-mood="hungry"] .pet-body{ filter: saturate(0.55); }
+  .pet[data-asleep="true"] .pet-eye::after{ scale: 1 0.15; }
+  .pet[data-asleep="true"] .pet-eyes{ translate: 0 4px; }
+
+  .pet-think{
+    position:absolute;
+    left:22px;
+    top:-22px;
+    padding: 1px 6px;
+    border-radius: 9px;
+    font: 800 12px 'Nunito', sans-serif;
+    color:#08403f;
+    background:#fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    white-space:nowrap;
+    display:none;
+  }
+  .pet[data-mood="hungry"]:not([data-asleep="true"]) .pet-think,
+  .pet[data-asleep="true"] .pet-think{ display:block; }
+
+  .pet-bubble{
+    position:absolute;
+    bottom: 84px;
+    left:0;
+    z-index:6;
+    width:160px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: var(--bg-deep);
+    border: 2px solid var(--panel-border);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+    font-size: 13px;
+    font-weight: 800;
+    text-align:left;
+  }
+  .pet-bubble[hidden]{ display:none; }
+  .pet-meter{
+    height:8px;
+    margin: 6px 0 9px;
+    border-radius:4px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-line);
+    overflow:hidden;
+  }
+  .pet-meter-fill{
+    height:100%;
+    width:50%;
+    border-radius:4px;
+    background: linear-gradient(90deg, var(--orange), var(--green));
+    transition: width 0.4s ease;
+  }
+  .pet-feed{
+    width:100%;
+    border:none;
+    border-radius:10px;
+    padding: 7px 0;
+    cursor:pointer;
+    color:#fff;
+    font: 800 13px 'Nunito', sans-serif;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--green) 75%, white), var(--green) 50%, color-mix(in srgb, var(--green) 80%, black));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 3px 0 color-mix(in srgb, var(--green) 55%, black);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .pet-feed:active{ translate: 0 3px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
+  .pet-feed:disabled{ opacity:0.6; cursor:default; }
+
+  /* a falling hex-nut snack */
+  .pet-bolt{
+    position:absolute;
+    bottom: 34px;
+    width:14px;
+    height:14px;
+    margin-left:-7px;
+    z-index:3;
+    clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+    background: radial-gradient(circle, transparent 0 2.5px, #c3c8ce 3px, #7a828d 100%);
+    pointer-events:none;
+  }
+  .pet-heart{
+    position:absolute;
+    bottom: 70px;
+    z-index:5;
+    font-size: 15px;
+    color: var(--pink);
+    pointer-events:none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .bot-zzz span, .bot-mug span, .pet.walking .pet-tread,
+    .pet.walking .pet-body, .pet.walking .pet-eyes,
+    html[data-graphics="high"] .bot-icon .antenna::after{ animation:none; }
+    .bot-zzz span{ opacity:0.8; }
+    .bot-zzz span:nth-child(2){ translate: 7px -12px; }
+    .bot-zzz span:nth-child(3){ translate: 14px -26px; }
+  }
+
 </style>
 </head>
 <body>
 
   <main class="panel">
+    <canvas id="fx-canvas" aria-hidden="true"></canvas>
     <a class="corner-trigger" href="walle.html" aria-label="???" title="???">
       <span class="corner-face">
         <span class="corner-eye"></span>
@@ -549,6 +963,18 @@
     <span class="bolt br"></span>
 
     <div class="socials" id="socials"></div>
+
+    <div class="settings-pop" id="settings-pop" role="dialog" aria-label="Settings" hidden>
+      <p class="settings-title">Settings</p>
+      <div class="settings-row">
+        <span class="settings-label" id="graphics-label">Graphics</span>
+        <div class="seg" role="radiogroup" aria-labelledby="graphics-label">
+          <button type="button" role="radio" data-graphics="low">Low</button>
+          <button type="button" role="radio" data-graphics="high">High</button>
+        </div>
+      </div>
+      <p class="settings-note" id="settings-note"></p>
+    </div>
 
     <div class="dvd-bot" id="dvd-bot" aria-hidden="true">
       <span class="dvd-body"></span>
@@ -570,6 +996,8 @@
             <span class="eye"></span>
           </div>
         </div>
+        <div class="bot-zzz" aria-hidden="true"><span>z</span><span>z</span><span>Z</span></div>
+        <div class="bot-mug" aria-hidden="true"><span></span><span></span></div>
       </div>
 
       <h1 class="wordmark">
@@ -578,6 +1006,7 @@
     </div>
     <p class="tagline" id="tagline">just a robot doing robot things, also i play roblox i think</p>
     <p class="visit-counter" id="visit-counter"></p>
+    <p class="phase-label" id="phase-label"></p>
 
     <div class="buttons" id="buttons"></div>
   </main>
@@ -594,6 +1023,11 @@
     // Same modular pattern as BUTTONS: add/remove/reorder here, and
     // set visible: false to hide one without deleting its entry.
     const SOCIALS = [
+      {
+        type: 'settings-toggle',
+        label: 'Settings',
+        visible: true
+      },
       {
         type: 'theme-toggle',
         label: 'Toggle theme',
@@ -634,8 +1068,14 @@
       off: 'M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM17.78 9.22a.75.75 0 1 0-1.06 1.06L18.44 12l-1.72 1.72a.75.75 0 0 0 1.06 1.06L19.5 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L20.56 12l1.72-1.72a.75.75 0 0 0-1.06-1.06L19.5 10.94l-1.72-1.72Z'
     };
 
+    // Gear icon for the settings toggle ("settings" from Google's
+    // Material Icons, Apache License 2.0).
+    const SETTINGS_ICON = 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z';
+
+    // graphics: 'high' entries only render while High graphics is on.
     const BUTTONS = [
       { label: 'Roblox',  href: 'roblox.html', color: 'var(--roblox-red)', visible: true  },
+      { label: 'Games',   href: 'walle.html',  color: 'var(--blue)',       visible: true, graphics: 'high' },
       { label: 'About',   href: '#',           color: 'var(--orange)',     visible: false },
       { label: 'Friends', href: '#',           color: 'var(--green)',      visible: false }
     ];
@@ -645,6 +1085,13 @@
       container.innerHTML = SOCIALS
         .filter(s => s.visible !== false)
         .map(s => {
+          if (s.type === 'settings-toggle'){
+            return `
+              <button class="social-btn settings-toggle" id="settings-btn" type="button" aria-label="${s.label}" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-pop">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="${SETTINGS_ICON}"/></svg>
+              </button>
+            `;
+          }
           if (s.type === 'theme-toggle'){
             return `
               <button class="social-btn theme-toggle" id="theme-toggle-btn" type="button" aria-label="${s.label}">
@@ -671,6 +1118,9 @@
 
       const soundBtn = document.getElementById('sound-toggle-btn');
       if (soundBtn) soundBtn.addEventListener('click', toggleSound);
+
+      const settingsBtn = document.getElementById('settings-btn');
+      if (settingsBtn) settingsBtn.addEventListener('click', toggleSettings);
     }
 
     // -----------------------------------------------------------
@@ -731,6 +1181,7 @@
       const container = document.getElementById('buttons');
       container.innerHTML = BUTTONS
         .filter(b => b.visible !== false)
+        .filter(b => !b.graphics || b.graphics === getGraphics())
         .map(b => `
           <a class="btn" style="--btn-color:${b.color}" href="${b.href}">${b.label}</a>
         `).join('');
@@ -843,6 +1294,86 @@
       // however much time already passed since pointerdown.
       setTimeout(() => { window.location.href = href; }, fullWaitSeconds * 1000);
     }
+
+    // -----------------------------------------------------------
+    // Graphics setting: Low (default) / High. Same single-key
+    // localStorage pattern as theme and sound. The head script
+    // already set data-graphics before paint; switching here flips
+    // the attribute, re-renders the buttons (Games is High-only)
+    // and starts/stops the High extras (HighGfx, further down).
+    // -----------------------------------------------------------
+    const GRAPHICS_KEY = 'robot632_graphics';
+    const GRAPHICS_NOTES = {
+      low: 'The classic Robot632 look. Lightest on battery.',
+      high: 'A sky that follows your clock, a sleepy (or caffeinated) robot, eyes that follow you, Pip the pet robot, and a Games button.'
+    };
+
+    function getGraphics(){
+      return document.documentElement.dataset.graphics === 'high' ? 'high' : 'low';
+    }
+
+    function applyGraphics(mode){
+      document.documentElement.dataset.graphics = mode;
+      localStorage.setItem(GRAPHICS_KEY, mode);
+      renderButtons();
+      syncSettings();
+      if (mode === 'high') HighGfx.start(); else HighGfx.stop();
+    }
+
+    const settingsPop = document.getElementById('settings-pop');
+
+    function syncSettings(){
+      const mode = getGraphics();
+      settingsPop.querySelectorAll('[data-graphics]').forEach(b => {
+        const on = b.dataset.graphics === mode;
+        b.setAttribute('aria-checked', on ? 'true' : 'false');
+        b.tabIndex = on ? 0 : -1;
+      });
+      document.getElementById('settings-note').textContent = GRAPHICS_NOTES[mode];
+    }
+
+    function openSettings(){
+      settingsPop.hidden = false;
+      document.getElementById('settings-btn').setAttribute('aria-expanded', 'true');
+      syncSettings();
+      settingsPop.querySelector('[aria-checked="true"]').focus();
+    }
+
+    function closeSettings(returnFocus){
+      if (settingsPop.hidden) return;
+      settingsPop.hidden = true;
+      const btn = document.getElementById('settings-btn');
+      btn.setAttribute('aria-expanded', 'false');
+      if (returnFocus) btn.focus();
+    }
+
+    function toggleSettings(){
+      if (settingsPop.hidden) openSettings(); else closeSettings(false);
+    }
+
+    settingsPop.querySelectorAll('[data-graphics]').forEach(b => {
+      b.addEventListener('click', () => {
+        if (b.dataset.graphics !== getGraphics()) applyGraphics(b.dataset.graphics);
+      });
+    });
+
+    // arrow keys move between Low / High, like a normal radio group
+    settingsPop.addEventListener('keydown', (e) => {
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)){
+        e.preventDefault();
+        applyGraphics(getGraphics() === 'high' ? 'low' : 'high');
+        settingsPop.querySelector('[aria-checked="true"]').focus();
+      }
+    });
+
+    document.addEventListener('pointerdown', (e) => {
+      if (!settingsPop.hidden && !settingsPop.contains(e.target) && !e.target.closest('#settings-btn')){
+        closeSettings(false);
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeSettings(true);
+    });
 
     renderSocials();
     renderButtons();
@@ -1055,6 +1586,11 @@
     let dvdRAF = null;
 
     function blinkEyes(){
+      // a sleeping bot (High graphics, at night) keeps its eyes shut
+      if (getGraphics() === 'high' && document.documentElement.dataset.phase === 'night'){
+        blinkLoopTimer = setTimeout(blinkEyes, 3000);
+        return;
+      }
       eyes.forEach(eye => {
         eye.classList.remove('blinking');
         void eye.offsetWidth; // restart the animation each time
@@ -1130,6 +1666,480 @@
       window.addEventListener(evt, resetIdle, { passive: true })
     );
     resetIdle();
+
+    // -----------------------------------------------------------
+    // Optional little synth blips for High graphics (pet chirps).
+    // Same rule as the click sound: silent when sound is off.
+    // -----------------------------------------------------------
+    let blipCtx = null;
+    function blip(freq, duration = 0.08, type = 'sine', volume = 0.05){
+      if (!window.robot632SoundOn()) return;
+      try{
+        blipCtx = blipCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const osc = blipCtx.createOscillator();
+        const gain = blipCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, blipCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.5, blipCtx.currentTime + duration);
+        gain.gain.setValueAtTime(volume, blipCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, blipCtx.currentTime + duration);
+        osc.connect(gain).connect(blipCtx.destination);
+        osc.start();
+        osc.stop(blipCtx.currentTime + duration);
+      } catch (e){ /* no Web Audio, no blips */ }
+    }
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // -----------------------------------------------------------
+    // Pip: a tiny tracked robot that rolls along the bottom of the
+    // panel. Its fuel drains slowly in real time (even while the
+    // page is closed -- it's worked out from a saved timestamp), so
+    // coming back after a long time means a hungry Pip. Tap Pip to
+    // see the fuel meter and drop it a bolt; it rolls over and
+    // eats it. At night (see HighGfx) it falls asleep where it is.
+    // -----------------------------------------------------------
+    const Pet = (() => {
+      const KEY = 'robot632_pet';
+      const DECAY_MS = 6 * 60 * 1000; // one fuel point every 6 minutes
+      const PET_W = 40;
+      const EDGE = 26;                // stays clear of the corner bolts
+      const BOLT_FUEL = 25;
+
+      let el = null, bubble = null, meterFill = null, feedBtn = null, think = null;
+      let raf = null, saveTimer = null, lastFrame = 0;
+      let x = EDGE, dir = 1, target = null, pauseUntil = 0;
+      let fuel = 70;
+      let snack = null; // { el, x, landed }
+
+      function load(){
+        try{
+          const saved = JSON.parse(localStorage.getItem(KEY));
+          if (saved && typeof saved.fuel === 'number' && typeof saved.t === 'number'){
+            fuel = Math.max(0, Math.min(100, saved.fuel - (Date.now() - saved.t) / DECAY_MS));
+            return;
+          }
+        } catch (e){}
+        fuel = 70;
+      }
+
+      function save(){
+        localStorage.setItem(KEY, JSON.stringify({ fuel: Math.round(fuel * 10) / 10, t: Date.now() }));
+      }
+
+      function mood(){ return fuel >= 60 ? 'happy' : fuel >= 25 ? 'ok' : 'hungry'; }
+      function asleep(){ return document.documentElement.dataset.phase === 'night' && !snack; }
+
+      function bounds(){
+        return { min: EDGE, max: Math.max(EDGE, panelEl.clientWidth - EDGE - PET_W) };
+      }
+
+      function build(){
+        el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'pet';
+        el.setAttribute('aria-label', 'Pip, the pet robot. Tap to check on it.');
+        el.innerHTML = `
+          <span class="pet-inner" aria-hidden="true">
+            <span class="pet-neck"></span>
+            <span class="pet-eyes"><span class="pet-eye"></span><span class="pet-eye"></span></span>
+            <span class="pet-body"></span>
+            <span class="pet-tread"></span>
+          </span>
+          <span class="pet-think" aria-hidden="true"></span>
+        `;
+        think = el.querySelector('.pet-think');
+
+        bubble = document.createElement('div');
+        bubble.className = 'pet-bubble';
+        bubble.hidden = true;
+        bubble.innerHTML = `
+          <div><span>Pip</span> <span class="pet-status" style="opacity:0.7"></span></div>
+          <div class="pet-meter" role="meter" aria-label="Pip's fuel" aria-valuemin="0" aria-valuemax="100"><div class="pet-meter-fill"></div></div>
+          <button type="button" class="pet-feed">Drop a bolt 🔩</button>
+        `;
+        meterFill = bubble.querySelector('.pet-meter-fill');
+        feedBtn = bubble.querySelector('.pet-feed');
+
+        el.addEventListener('click', () => {
+          bubble.hidden = !bubble.hidden;
+          updateBubble();
+          hearts(2);
+          blip(asleep() ? 300 : 700, 0.09);
+          if (!asleep()) pauseUntil = performance.now() + 1500; // stops to look at you
+        });
+        feedBtn.addEventListener('click', dropSnack);
+
+        panelEl.appendChild(el);
+        panelEl.appendChild(bubble);
+      }
+
+      function updateBubble(){
+        if (!bubble || bubble.hidden) return;
+        const m = mood();
+        const status = asleep() ? 'is asleep' : m === 'happy' ? 'is happy' : m === 'ok' ? 'is fine' : 'is hungry!';
+        bubble.querySelector('.pet-status').textContent = status;
+        meterFill.style.width = `${Math.round(fuel)}%`;
+        bubble.querySelector('.pet-meter').setAttribute('aria-valuenow', Math.round(fuel));
+        feedBtn.disabled = !!snack || fuel >= 99.5;
+        feedBtn.textContent = fuel >= 99.5 ? 'Full! 🔋' : 'Drop a bolt 🔩';
+      }
+
+      function placeBubble(){
+        if (bubble.hidden) return;
+        const w = panelEl.clientWidth;
+        const left = Math.min(Math.max(x + PET_W / 2 - 80, 10), w - 170);
+        bubble.style.left = `${left}px`;
+      }
+
+      function hearts(count){
+        if (reduceMotion) return;
+        for (let i = 0; i < count; i++){
+          const h = document.createElement('span');
+          h.className = 'pet-heart';
+          h.textContent = '♥';
+          h.style.left = `${x + 12 + Math.random() * 16}px`;
+          panelEl.appendChild(h);
+          h.animate(
+            [
+              { translate: '0 0', opacity: 1 },
+              { translate: `${(Math.random() - 0.5) * 30}px -38px`, opacity: 0 }
+            ],
+            { duration: 900 + Math.random() * 300, delay: i * 120, easing: 'ease-out', fill: 'both' }
+          ).onfinish = () => h.remove();
+        }
+      }
+
+      function dropSnack(e){
+        e.stopPropagation();
+        if (snack) return;
+        const b = bounds();
+        const sx = b.min + PET_W / 2 + Math.random() * (b.max - b.min);
+        const s = document.createElement('span');
+        s.className = 'pet-bolt';
+        s.style.left = `${sx}px`;
+        panelEl.appendChild(s);
+        snack = { el: s, x: sx, landed: false };
+        // falls from near the top of the panel down to Pip's floor
+        const fall = Math.max(60, panelEl.clientHeight - 90);
+        const anim = s.animate(
+          [
+            { translate: `0 -${fall}px`, rotate: '0deg' },
+            { translate: '0 0', rotate: '540deg' }
+          ],
+          { duration: reduceMotion ? 1 : 900, easing: 'cubic-bezier(0.5, 0, 1, 1)', fill: 'forwards' }
+        );
+        anim.onfinish = () => {
+          if (!snack) return;
+          snack.landed = true;
+          target = null;
+          pauseUntil = 0;
+          blip(220, 0.05, 'triangle', 0.04);
+        };
+        updateBubble();
+      }
+
+      function eat(){
+        snack.el.remove();
+        snack = null;
+        fuel = Math.min(100, fuel + BOLT_FUEL);
+        save();
+        hearts(4);
+        blip(520, 0.07, 'square', 0.03);
+        setTimeout(() => blip(780, 0.09, 'square', 0.03), 90);
+        if (!reduceMotion){
+          el.animate(
+            [{ translate: `${x}px 0` }, { translate: `${x}px -10px` }, { translate: `${x}px 0` }],
+            { duration: 380, easing: 'ease-out' }
+          );
+        }
+        pauseUntil = performance.now() + 1600;
+        updateBubble();
+      }
+
+      function tick(now){
+        const dt = Math.min(50, now - (lastFrame || now));
+        lastFrame = now;
+        fuel = Math.max(0, fuel - dt / DECAY_MS);
+
+        const b = bounds();
+        const m = mood();
+        const sleeping = asleep();
+        let moving = false;
+
+        if (!sleeping && now >= pauseUntil){
+          if (snack && snack.landed) target = snack.x - PET_W / 2;
+          if (target === null && !snack) target = b.min + Math.random() * (b.max - b.min);
+          if (target !== null){
+            target = Math.min(Math.max(target, b.min), b.max);
+            const speed = (m === 'happy' ? 0.07 : m === 'ok' ? 0.05 : 0.028) * dt;
+            const d = target - x;
+            if (Math.abs(d) <= speed){
+              x = target;
+              target = null;
+              if (snack && snack.landed) eat();
+              else pauseUntil = now + 1200 + Math.random() * 3800;
+            } else {
+              dir = Math.sign(d);
+              x += dir * speed;
+              moving = true;
+            }
+          }
+        }
+        x = Math.min(Math.max(x, b.min), b.max);
+
+        el.style.translate = `${x}px 0`;
+        el.style.setProperty('--dir', dir);
+        el.classList.toggle('walking', moving);
+        el.dataset.mood = m;
+        el.dataset.asleep = sleeping ? 'true' : 'false';
+        think.textContent = sleeping ? 'z z z' : '🔩?';
+        placeBubble();
+        if (Math.random() < 0.02) updateBubble(); // cheap, a few times a second
+
+        raf = requestAnimationFrame(tick);
+      }
+
+      function onPagehide(){ save(); }
+
+      return {
+        start(){
+          if (el) return;
+          load();
+          build();
+          const b = bounds();
+          x = b.min + Math.random() * (b.max - b.min);
+          lastFrame = 0;
+          raf = requestAnimationFrame(tick);
+          saveTimer = setInterval(save, 30000);
+          window.addEventListener('pagehide', onPagehide);
+        },
+        stop(){
+          if (!el) return;
+          save();
+          cancelAnimationFrame(raf);
+          clearInterval(saveTimer);
+          window.removeEventListener('pagehide', onPagehide);
+          if (snack){ snack.el.remove(); snack = null; }
+          el.remove();
+          bubble.remove();
+          el = bubble = null;
+          target = null;
+        },
+        closeBubble(e){
+          if (bubble && !bubble.hidden && !bubble.contains(e.target) && !el.contains(e.target)) bubble.hidden = true;
+        }
+      };
+    })();
+
+    document.addEventListener('pointerdown', (e) => Pet.closeBubble(e));
+
+    // -----------------------------------------------------------
+    // HighGfx: the robot's day. The visitor's local hour picks a
+    // phase -- night (22-6), morning (6-10), day (10-18), evening
+    // (18-22) -- which tints the sky (CSS, via data-phase on
+    // <html>), changes what the bot is doing (asleep with Zzz,
+    // coffee mug, warm eyes), and picks the particles drawn on
+    // #fx-canvas: twinkling stars + the odd shooting star, rising
+    // morning bubbles, drifting day dust, or evening fireflies.
+    // Also makes the bot's eyes follow the pointer while awake.
+    // -----------------------------------------------------------
+    const HighGfx = (() => {
+      const canvas = document.getElementById('fx-canvas');
+      const ctx = canvas.getContext('2d');
+      const phaseLabel = document.getElementById('phase-label');
+      const visor = document.querySelector('.bot-icon .visor');
+
+      const PHASES = {
+        night:   { label: '🌙 night: robot is recharging, shh', count: 80 },
+        morning: { label: '☕ morning: robot is having its oil coffee', count: 26 },
+        day:     { label: '☀️ day: robot is fully operational', count: 30 },
+        evening: { label: '🌇 evening: robot is winding down', count: 22 }
+      };
+
+      let running = false;
+      let phase = null;
+      let particles = [];
+      let shooting = null;
+      let nextShootAt = 0;
+      let raf = null, phaseTimer = null;
+      let W = 0, H = 0;
+
+      function phaseFor(hour){
+        if (hour >= 22 || hour < 6) return 'night';
+        if (hour < 10) return 'morning';
+        if (hour < 18) return 'day';
+        return 'evening';
+      }
+
+      function resize(){
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        W = panelEl.clientWidth;
+        H = panelEl.clientHeight;
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      const panelObserver = new ResizeObserver(() => {
+        resize();
+        if (reduceMotion) draw(0);
+      });
+
+      function makeParticles(){
+        const n = PHASES[phase].count;
+        particles = Array.from({ length: n }, () => ({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          r: phase === 'night' ? 0.6 + Math.random() * 1.4 : 1.5 + Math.random() * 3,
+          vx: (Math.random() - 0.5) * 0.2,
+          vy: phase === 'morning' ? -(0.15 + Math.random() * 0.3) : (Math.random() - 0.5) * 0.15,
+          t: Math.random() * Math.PI * 2,
+          s: 0.6 + Math.random() * 1.2
+        }));
+      }
+
+      function updatePhase(){
+        const p = phaseFor(new Date().getHours());
+        if (p === phase) return;
+        phase = p;
+        document.documentElement.dataset.phase = p;
+        phaseLabel.textContent = PHASES[p].label;
+        if (p === 'night') eyes.forEach(eye => { eye.style.translate = ''; });
+        makeParticles();
+        if (reduceMotion) draw(0);
+      }
+
+      function dot(x, y, r, color, glow){
+        if (glow){
+          ctx.globalAlpha *= 0.25;
+          ctx.beginPath();
+          ctx.arc(x, y, r * 3, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.globalAlpha *= 4;
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+
+      function draw(now){
+        ctx.clearRect(0, 0, W, H);
+        const light = document.documentElement.dataset.theme === 'light';
+        for (const p of particles){
+          if (!reduceMotion){
+            p.t += 0.02 * p.s;
+            if (phase === 'evening'){
+              p.x += Math.cos(p.t * 0.7) * 0.4 + p.vx;
+              p.y += Math.sin(p.t * 0.9) * 0.3 + p.vy;
+            } else if (phase !== 'night'){
+              p.x += p.vx + Math.sin(p.t) * 0.15;
+              p.y += p.vy;
+            }
+            if (p.y < -10) p.y = H + 10;
+            if (p.y > H + 10) p.y = -10;
+            if (p.x < -10) p.x = W + 10;
+            if (p.x > W + 10) p.x = -10;
+          }
+          if (phase === 'night'){
+            ctx.globalAlpha = 0.3 + 0.7 * Math.abs(Math.sin(p.t));
+            dot(p.x, p.y, p.r, light ? '#3a4a9a' : '#ffffff', p.r > 1.6);
+          } else if (phase === 'morning'){
+            ctx.globalAlpha = 0.35;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r * 1.6, 0, Math.PI * 2);
+            ctx.strokeStyle = light ? 'rgba(200,110,40,0.8)' : 'rgba(255,236,200,0.9)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          } else if (phase === 'day'){
+            ctx.globalAlpha = 0.25 + 0.15 * Math.sin(p.t);
+            dot(p.x, p.y, p.r * 0.7, light ? 'rgba(0,90,90,0.7)' : '#ffffff', false);
+          } else {
+            ctx.globalAlpha = 0.25 + 0.75 * Math.max(0, Math.sin(p.t * 1.3));
+            dot(p.x, p.y, p.r * 0.8, light ? '#e08a10' : '#ffc65a', true);
+          }
+        }
+
+        // the odd shooting star at night
+        if (phase === 'night' && !reduceMotion){
+          if (!shooting && now > nextShootAt){
+            shooting = { x: Math.random() * W * 0.7, y: Math.random() * H * 0.4, life: 0 };
+          }
+          if (shooting){
+            shooting.life += 1;
+            const len = 70;
+            const sx = shooting.x + shooting.life * 9;
+            const sy = shooting.y + shooting.life * 4;
+            const streak = light ? '58,74,154' : '255,255,255';
+            const grad = ctx.createLinearGradient(sx - len, sy - len * 0.45, sx, sy);
+            grad.addColorStop(0, `rgba(${streak},0)`);
+            grad.addColorStop(1, `rgba(${streak},0.9)`);
+            ctx.globalAlpha = Math.max(0, 1 - shooting.life / 45);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(sx - len, sy - len * 0.45);
+            ctx.lineTo(sx, sy);
+            ctx.stroke();
+            if (shooting.life > 45){
+              shooting = null;
+              nextShootAt = now + 6000 + Math.random() * 9000;
+            }
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function loop(now){
+        draw(now);
+        raf = requestAnimationFrame(loop);
+      }
+
+      function followPointer(e){
+        if (phase === 'night') return;
+        const r = visor.getBoundingClientRect();
+        const dx = e.clientX - (r.left + r.width / 2);
+        const dy = e.clientY - (r.top + r.height / 2);
+        const dist = Math.hypot(dx, dy) || 1;
+        const reach = Math.min(1, dist / 220);
+        eyes.forEach(eye => {
+          eye.style.translate = `${(dx / dist) * 3.5 * reach}px ${(dy / dist) * 3 * reach}px`;
+        });
+      }
+
+      return {
+        start(){
+          if (running) return;
+          running = true;
+          resize();
+          phase = null;
+          updatePhase();
+          phaseTimer = setInterval(updatePhase, 60000);
+          panelObserver.observe(panelEl);
+          window.addEventListener('pointermove', followPointer, { passive: true });
+          nextShootAt = performance.now() + 3000;
+          if (reduceMotion) draw(0); else raf = requestAnimationFrame(loop);
+          Pet.start();
+        },
+        stop(){
+          if (!running) return;
+          running = false;
+          cancelAnimationFrame(raf);
+          clearInterval(phaseTimer);
+          panelObserver.disconnect();
+          window.removeEventListener('pointermove', followPointer);
+          ctx.clearRect(0, 0, W, H);
+          delete document.documentElement.dataset.phase;
+          eyes.forEach(eye => { eye.style.translate = ''; });
+          shooting = null;
+          Pet.stop();
+        }
+      };
+    })();
+
+    if (getGraphics() === 'high') HighGfx.start();
   </script>
 
 <style>

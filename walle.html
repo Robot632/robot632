@@ -139,7 +139,7 @@
   .device{
     position:relative;
     width:100%;
-    max-width:340px;
+    max-width:340px; /* lowered by fitDevice() on short screens */
     background: linear-gradient(155deg, var(--panel-metal-hi) 0%, var(--panel-metal-mid) 55%, var(--panel-metal-lo) 100%);
     border-radius:18px;
     border:1px solid var(--panel-border);
@@ -390,6 +390,106 @@
   }
   .start-btn:hover{ transform: translateY(-2px); }
   .start-btn:active{ transform: translateY(1px); }
+
+  /* ---------- game picker: same bordered-chip look as home-link ---------- */
+  .game-picker{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:6px;
+  }
+  .game-tab{
+    font-family:'Space Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color: var(--text);
+    background: var(--tagline-bg);
+    border:1px solid var(--tagline-border);
+    border-radius:6px;
+    padding:5px 10px;
+    cursor:pointer;
+    opacity:0.7;
+    transition: opacity 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .game-tab:hover{ opacity:1; }
+  .game-tab[aria-selected="true"]{
+    opacity:1;
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent-cyan) 50%, transparent);
+  }
+
+  /* the Signal Sequence wrapper must not break the panel's flex/gap
+     layout, so it lays its children out as if it weren't there */
+  .game-view{ display:contents; }
+  .game-view[hidden]{ display:none; }
+
+  /* ---------- arcade games (Flappy Robot / Snake / Reflex) ---------- */
+  .arcade{
+    flex:1;
+    min-height:0;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+  }
+  .arcade[hidden]{ display:none; }
+  .arcade-stage{
+    flex:1;
+    min-height:120px;
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  #arcade-canvas{
+    display:block;
+    border-radius:12px;
+    border:1px solid rgba(0,0,0,0.4);
+    box-shadow: 0 14px 26px rgba(0,0,0,0.3);
+    touch-action:none;
+    cursor:pointer;
+  }
+  .arcade-score{
+    font-family:'Space Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    background: var(--tagline-bg);
+    border:1px solid var(--tagline-border);
+    border-radius:10px;
+    padding:5px 12px;
+    margin:0;
+  }
+  .arcade-hint{
+    font-weight:800;
+    font-size:12px;
+    opacity:0.85;
+    margin:0;
+    text-align:center;
+  }
+  .dpad{
+    display:none;
+    grid-template-columns: repeat(3, 44px);
+    grid-template-rows: repeat(2, 36px);
+    gap:5px;
+  }
+  .dpad.show{ display:grid; }
+  .dpad button{
+    border-radius:9px;
+    font-size:16px;
+    color: var(--text);
+    background: var(--tagline-bg);
+    border:1px solid var(--tagline-border);
+    cursor:pointer;
+    touch-action: manipulation;
+  }
+  .dpad button:active{ transform: translateY(2px); }
+  .dpad [data-dir="up"]{ grid-column:2; grid-row:1; }
+  .dpad [data-dir="left"]{ grid-column:1; grid-row:2; }
+  .dpad [data-dir="down"]{ grid-column:2; grid-row:2; }
+  .dpad [data-dir="right"]{ grid-column:3; grid-row:2; }
 </style>
 </head>
 <body>
@@ -404,6 +504,14 @@
       <span>S</span><span>I</span><span>G</span><span>N</span><span>A</span><span>L</span><span>&nbsp;</span><span>S</span><span>E</span><span>Q</span><span>U</span><span>E</span><span>N</span><span>C</span><span>E</span>
     </h1>
 
+    <div class="game-picker" role="tablist" aria-label="Games">
+      <button class="game-tab" role="tab" type="button" data-game="signal">signal</button>
+      <button class="game-tab" role="tab" type="button" data-game="flappy">flappy</button>
+      <button class="game-tab" role="tab" type="button" data-game="snake">snake</button>
+      <button class="game-tab" role="tab" type="button" data-game="reflex">reflex</button>
+    </div>
+
+    <div class="game-view" id="view-signal">
     <div class="device">
       <div class="screen">
         <svg viewBox="0 0 120 70" id="scannerSvg">
@@ -439,6 +547,21 @@
 
     <p class="status" id="status">press start to begin</p>
     <button class="start-btn" id="startBtn">start</button>
+    </div>
+
+    <div class="arcade" id="view-arcade" hidden>
+      <div class="arcade-stage" id="arcade-stage">
+        <canvas id="arcade-canvas" width="360" height="440" tabindex="0" aria-label="Game area"></canvas>
+      </div>
+      <p class="arcade-score" id="arcade-score" aria-live="polite"></p>
+      <p class="arcade-hint" id="arcade-hint"></p>
+      <div class="dpad" id="arcade-dpad" aria-label="Snake controls">
+        <button type="button" data-dir="up" aria-label="Up">&#9650;</button>
+        <button type="button" data-dir="left" aria-label="Left">&#9664;</button>
+        <button type="button" data-dir="down" aria-label="Down">&#9660;</button>
+        <button type="button" data-dir="right" aria-label="Right">&#9654;</button>
+      </div>
+    </div>
   </main>
 
 <script>
@@ -543,6 +666,7 @@
   const ROUND_TIME_MS = 8000; // player has 8s per round -- the vent doubles as the countdown
 
   let sequence = [];
+  let seqTimers = []; // pending playback/next-round timeouts, see pauseSignal()
   let playerIndex = 0;
   let level = 0;
   let accepting = false;
@@ -674,6 +798,8 @@
 
   function startGame(){
     clearTimeout(autoStartTimer);
+    seqTimers.forEach(clearTimeout);
+    seqTimers = [];
     stopRoundTimer();
     sequence = [];
     level = 0;
@@ -706,15 +832,36 @@
     playSequence();
   }
 
+  function later(fn, ms){
+    seqTimers.push(setTimeout(fn, ms));
+  }
+
+  // called by the game picker when switching away: drops whatever
+  // round is in flight and leaves the board ready for "start"
+  function pauseSignal(){
+    clearTimeout(autoStartTimer);
+    seqTimers.forEach(clearTimeout);
+    seqTimers = [];
+    stopRoundTimer();
+    accepting = false;
+    sequence = [];
+    level = 0;
+    levelVal.textContent = 0;
+    padEls.forEach(p => { p.disabled = true; p.classList.remove('lit'); });
+    resetVisuals();
+    updatePips(0);
+    startBtn.textContent = 'start';
+  }
+
   function playSequence(){
     const step = speedForLevel(level);
     sequence.forEach((padId, i) => {
-      setTimeout(() => {
+      later(() => {
         PADS[padId].play();
         litPad(padId, step * 0.6);
       }, i * step);
     });
-    setTimeout(() => {
+    later(() => {
       accepting = true;
       padEls.forEach(p => p.disabled = false);
       setStatus('your turn');
@@ -767,7 +914,7 @@
       stopRoundTimer();
       padEls.forEach(p => p.disabled = true);
       winRoundSound();
-      setTimeout(nextRound, 500);
+      later(nextRound, 500);
     }
   }
 
@@ -779,6 +926,30 @@
 
   startBtn.addEventListener('click', startGame);
   levelRestartBtn.addEventListener('click', startGame);
+
+  // -----------------------------------------------------------
+  // The panel has a fixed height and hides overflow, so on short
+  // screens the device shrinks until the start button fits. The
+  // device's height follows its width (square board + wide screen),
+  // so shrinking the width by the overflow / height-per-width ratio
+  // pulls everything below it back into view.
+  // -----------------------------------------------------------
+  const deviceEl = document.querySelector('.device');
+  const panelMain = document.querySelector('.panel');
+  const DEVICE_MAX_W = 340, DEVICE_MIN_W = 190;
+
+  function fitDevice(){
+    if (startBtn.offsetParent === null) return; // Signal Sequence isn't showing
+    deviceEl.style.maxWidth = `${DEVICE_MAX_W}px`;
+    const padBottom = parseFloat(getComputedStyle(panelMain).paddingBottom) || 0;
+    const overflow = startBtn.getBoundingClientRect().bottom + padBottom - panelMain.getBoundingClientRect().bottom;
+    if (overflow <= 0) return;
+    const rect = deviceEl.getBoundingClientRect();
+    const tallness = rect.height / rect.width;
+    deviceEl.style.maxWidth = `${Math.max(DEVICE_MIN_W, Math.floor(rect.width - overflow / tallness))}px`;
+  }
+  new ResizeObserver(fitDevice).observe(panelMain);
+  document.fonts.ready.then(fitDevice);
 
   // auto-start 5s after the page loads if nobody has hit start yet
   let autoStartTimer = setTimeout(startGame, 5000);
@@ -801,8 +972,8 @@
     { family: "'Rubik', sans-serif",         weight: 700, tilt: 2  }
   ];
 
-  const titleLetters = Array.from(document.querySelectorAll('.wordmark span'));
-  const titleOffsets = titleLetters.map(() => 0);
+  let titleLetters = Array.from(document.querySelectorAll('.wordmark span'));
+  let titleOffsets = titleLetters.map(() => 0);
   let titleFontIndex = 0;
 
   function applyTitleFont(letter, i){
@@ -838,18 +1009,647 @@
     );
   }
 
-  titleLetters.forEach((letter, i) => {
-    letter.addEventListener('click', () => {
-      titleOffsets[i] = (titleOffsets[i] + 1) % FONTS.length;
-      applyTitleFont(letter, i);
-      bounceTitleLetter(letter);
+  function bindTitleLetters(){
+    titleLetters.forEach((letter, i) => {
+      letter.addEventListener('click', () => {
+        titleOffsets[i] = (titleOffsets[i] + 1) % FONTS.length;
+        applyTitleFont(letter, i);
+        bounceTitleLetter(letter);
+      });
     });
-  });
+  }
+  bindTitleLetters();
+
+  // used by the game picker: swaps the wordmark to another game's
+  // name, one span per letter, in the current cascade font
+  function setTitle(text){
+    const wordmark = document.getElementById('wordmark');
+    wordmark.innerHTML = Array.from(text).map(c => `<span>${c === ' ' ? '&nbsp;' : c}</span>`).join('');
+    titleLetters = Array.from(wordmark.querySelectorAll('span'));
+    titleOffsets = titleLetters.map(() => 0);
+    titleLetters.forEach((letter, i) => applyTitleFont(letter, i));
+    bindTitleLetters();
+  }
 
   document.fonts.ready.then(() => {
     titleLetters.forEach((letter, i) => applyTitleFont(letter, i));
     cascadeTitleFonts();
   });
+</script>
+
+<script>
+  // -----------------------------------------------------------
+  // Game picker + arcade: Signal Sequence (above) is one choice;
+  // Flappy Robot, Snake and Reflex share one canvas and one loop.
+  // Each arcade game is an object with reset / press / update /
+  // draw / scoreText (and optional turn / stop). Best scores live
+  // in localStorage on this device only. Sounds go through tone()
+  // from the Signal Sequence script, so they respect the mute.
+  // The picked game is remembered, and a #flappy / #snake /
+  // #reflex / #signal hash in the URL picks one directly.
+  // -----------------------------------------------------------
+  (function(){
+    const W = 360, H = 440;
+    const canvas = document.getElementById('arcade-canvas');
+    const ctx = canvas.getContext('2d');
+    const stage = document.getElementById('arcade-stage');
+    const scoreEl = document.getElementById('arcade-score');
+    const hintEl = document.getElementById('arcade-hint');
+    const dpad = document.getElementById('arcade-dpad');
+    const signalView = document.getElementById('view-signal');
+    const arcadeView = document.getElementById('view-arcade');
+
+    (function setupCanvas(){
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    })();
+
+    // fit the canvas inside whatever room the panel leaves, keeping
+    // its 360x440 shape
+    new ResizeObserver(() => {
+      const scale = Math.min(stage.clientWidth / W, stage.clientHeight / H);
+      canvas.style.width = `${Math.floor(W * scale)}px`;
+      canvas.style.height = `${Math.floor(H * scale)}px`;
+    }).observe(stage);
+
+    // the arcade always draws on the device's dark screen colors
+    const COLORS = { bg1: '#16323e', bg2: '#0a1c24', grid: 'rgba(180,205,215,0.10)', text: '#ffffff', shade: 'rgba(0,0,0,0.5)' };
+
+    function getBest(key){
+      try { const v = parseInt(localStorage.getItem(key), 10); return isNaN(v) ? null : v; } catch (e){ return null; }
+    }
+    function setBest(key, v){
+      try { localStorage.setItem(key, v); } catch (e){}
+    }
+
+    function beep(freq, duration = 0.08, type = 'square', volume = 0.04){
+      tone(freq, freq, duration, 0, type, volume * 3);
+    }
+
+    // ---------- shared drawing helpers ----------
+    function rrect(x, y, w, h, r){
+      ctx.beginPath();
+      if (ctx.roundRect){ ctx.roundRect(x, y, w, h, r); return; }
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function background(offset = 0){
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, COLORS.bg1);
+      g.addColorStop(1, COLORS.bg2);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = COLORS.grid;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = -(offset % 34); x < W; x += 34){ ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H); }
+      for (let y = 0; y < H; y += 34){ ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); }
+      ctx.stroke();
+    }
+
+    // the site's robot head, drawn at (x, y) with face width s
+    function drawBot(x, y, s, opt = {}){
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(opt.angle || 0);
+      // antenna
+      ctx.fillStyle = '#7a828d';
+      ctx.fillRect(-s * 0.04, -s * 0.78, s * 0.08, s * 0.3);
+      ctx.beginPath();
+      ctx.arc(0, -s * 0.8, s * 0.1, 0, Math.PI * 2);
+      ctx.fillStyle = opt.light || '#e4e7eb';
+      ctx.fill();
+      // face
+      const fg = ctx.createLinearGradient(-s / 2, -s / 2, s / 2, s / 2);
+      fg.addColorStop(0, '#f6f7f8');
+      fg.addColorStop(0.5, '#e4e7eb');
+      fg.addColorStop(1, '#9aa1aa');
+      rrect(-s / 2, -s / 2, s, s, s * 0.22);
+      ctx.fillStyle = fg;
+      ctx.fill();
+      // visor
+      rrect(-s * 0.38, -s * 0.14, s * 0.76, s * 0.36, s * 0.13);
+      ctx.fillStyle = '#2c2f34';
+      ctx.fill();
+      // eyes
+      const ex = opt.eyeX || 0, ey = opt.eyeY || 0;
+      ctx.fillStyle = opt.eyeColor || '#ffffff';
+      ctx.shadowColor = opt.eyeColor || 'rgba(255,255,255,0.8)';
+      ctx.shadowBlur = s * 0.12;
+      for (const side of [-1, 1]){
+        ctx.beginPath();
+        if (opt.closed) ctx.ellipse(side * s * 0.17 + ex, s * 0.04, s * 0.09, s * 0.018, 0, 0, Math.PI * 2);
+        else ctx.arc(side * s * 0.17 + ex, s * 0.04 + ey, s * (opt.wide ? 0.105 : 0.08), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function centerText(text, y, size, alpha = 1){
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = `${size}px Bangers, 'Nunito', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = COLORS.shade;
+      ctx.strokeText(text, W / 2, y);
+      ctx.fillStyle = COLORS.text;
+      ctx.fillText(text, W / 2, y);
+      ctx.restore();
+    }
+
+    function smallText(text, y){
+      ctx.save();
+      ctx.font = `800 15px Nunito, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = COLORS.text;
+      ctx.globalAlpha = 0.85;
+      ctx.fillText(text, W / 2, y);
+      ctx.restore();
+    }
+
+    // ===========================================================
+    // Flappy Robot: tap to fire the thrusters, dodge the pillars.
+    // ===========================================================
+    const Flappy = (() => {
+      const KEY = 'robot632_best_flappy';
+      const GROUND = H - 40;
+      const BX = 96, R = 15, PW = 58, GAP = 140, SPEED = 2.4;
+      let s;
+
+      function reset(){
+        s = { state: 'ready', y: H / 2 - 30, vy: 0, pipes: [], score: 0, t: 0, scroll: 0, overAt: 0, flame: 0 };
+        updateScore();
+      }
+
+      function flap(){
+        s.vy = -7;
+        s.flame = 8;
+        beep(620, 0.05, 'square', 0.025);
+      }
+
+      function die(){
+        s.state = 'over';
+        s.overAt = performance.now();
+        beep(140, 0.3, 'sawtooth', 0.04);
+        const best = getBest(KEY);
+        if (best === null || s.score > best) setBest(KEY, s.score);
+        updateScore();
+      }
+
+      function press(){
+        if (s.state === 'ready'){ s.state = 'play'; flap(); }
+        else if (s.state === 'play') flap();
+        else if (performance.now() - s.overAt > 450) reset();
+      }
+
+      function update(k){
+        s.t += k;
+        if (s.flame > 0) s.flame -= k;
+        if (s.state !== 'over') s.scroll += SPEED * k;
+        if (s.state === 'ready'){ s.y = H / 2 - 30 + Math.sin(s.t / 10) * 7; return; }
+        if (s.state === 'over'){
+          if (s.y < GROUND - R){ s.vy += 0.5 * k; s.y = Math.min(GROUND - R, s.y + s.vy * k); }
+          return;
+        }
+        s.vy = Math.min(10, s.vy + 0.42 * k);
+        s.y += s.vy * k;
+        if (s.y < R){ s.y = R; s.vy = 0; }
+
+        const last = s.pipes[s.pipes.length - 1];
+        if (!last || last.x < W - 200) s.pipes.push({ x: W + 10, gapY: 50 + Math.random() * (GROUND - GAP - 100), passed: false });
+        for (const p of s.pipes){
+          p.x -= SPEED * k;
+          if (!p.passed && p.x + PW < BX - R){
+            p.passed = true;
+            s.score++;
+            beep(980, 0.07, 'triangle', 0.04);
+            updateScore();
+          }
+        }
+        s.pipes = s.pipes.filter(p => p.x > -PW - 10);
+
+        if (s.y + R >= GROUND) return die();
+        for (const p of s.pipes){
+          if (BX + R - 3 > p.x && BX - R + 3 < p.x + PW && (s.y - R + 3 < p.gapY || s.y + R - 3 > p.gapY + GAP)) return die();
+        }
+      }
+
+      function pillar(x, y, h, capAtBottom){
+        const g = ctx.createLinearGradient(x, 0, x + PW, 0);
+        g.addColorStop(0, '#5b626c');
+        g.addColorStop(0.35, '#c3c8ce');
+        g.addColorStop(1, '#4b525c');
+        ctx.fillStyle = g;
+        ctx.fillRect(x + 4, y, PW - 8, h);
+        const capY = capAtBottom ? y + h - 16 : y;
+        rrect(x, capY, PW, 16, 4);
+        ctx.fill();
+        // rivets on the cap
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        for (const rx of [x + 9, x + PW - 9]){
+          ctx.beginPath();
+          ctx.arc(rx, capY + 8, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function draw(){
+        background(s.scroll * 0.3);
+        for (const p of s.pipes){
+          pillar(p.x, 0, p.gapY, true);
+          pillar(p.x, p.gapY + GAP, GROUND - p.gapY - GAP, false);
+        }
+        // ground: hazard stripes
+        ctx.fillStyle = '#2f3238';
+        ctx.fillRect(0, GROUND, W, H - GROUND);
+        ctx.fillStyle = '#ffc93c';
+        for (let x = -(s.scroll % 24); x < W; x += 24){
+          ctx.beginPath();
+          ctx.moveTo(x, GROUND); ctx.lineTo(x + 12, GROUND); ctx.lineTo(x + 4, GROUND + 10); ctx.lineTo(x - 8, GROUND + 10);
+          ctx.fill();
+        }
+        // thruster flame
+        if (s.flame > 0 && s.state === 'play'){
+          ctx.fillStyle = 'rgba(255,150,60,0.9)';
+          ctx.beginPath();
+          ctx.moveTo(BX - 8, s.y + R + 2);
+          ctx.lineTo(BX + 8, s.y + R + 2);
+          ctx.lineTo(BX, s.y + R + 6 + s.flame * 2);
+          ctx.fill();
+        }
+        const angle = s.state === 'ready' ? 0 : Math.max(-0.5, Math.min(1.1, s.vy * 0.08));
+        drawBot(BX, s.y, R * 2, { angle, closed: s.state === 'over', eyeX: 2 });
+
+        if (s.state !== 'ready') centerText(String(s.score), 50, 46);
+        if (s.state === 'ready'){
+          centerText('Flappy Robot', H / 2 - 120, 40);
+          smallText('tap, click or press space', H / 2 + 50);
+        }
+        if (s.state === 'over'){
+          centerText('Crashed!', H / 2 - 40, 44);
+          smallText('tap to try again', H / 2 + 6);
+        }
+      }
+
+      function scoreText(){
+        const best = getBest(KEY);
+        return `score ${s.score} · best ${best === null ? '-' : best}`;
+      }
+
+      return { reset, press, update, draw, scoreText, hint: 'Tap / click / space to fire the thrusters. Dodge the pillars.' };
+    })();
+
+    // ===========================================================
+    // Snake: a robot head collecting hex nuts.
+    // ===========================================================
+    const Snake = (() => {
+      const KEY = 'robot632_best_snake';
+      const C = 20, COLS = W / C, ROWS = H / C;
+      let s;
+
+      function placeNut(){
+        let f;
+        do { f = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) }; }
+        while (s.body.some(b => b.x === f.x && b.y === f.y));
+        s.nut = f;
+      }
+
+      function reset(){
+        s = {
+          state: 'ready',
+          body: [{ x: 8, y: 11 }, { x: 7, y: 11 }, { x: 6, y: 11 }],
+          dir: { x: 1, y: 0 },
+          queue: [],
+          acc: 0,
+          interval: 150,
+          score: 0,
+          overAt: 0,
+          t: 0
+        };
+        placeNut();
+        updateScore();
+      }
+
+      function turn(dx, dy){
+        if (s.state === 'over') return;
+        if (s.state === 'ready') s.state = 'play';
+        const last = s.queue.length ? s.queue[s.queue.length - 1] : s.dir;
+        if ((last.x === -dx && last.y === -dy) || (last.x === dx && last.y === dy)) return;
+        if (s.queue.length < 3) s.queue.push({ x: dx, y: dy });
+      }
+
+      function press(){
+        if (s.state === 'ready') s.state = 'play';
+        else if (s.state === 'over' && performance.now() - s.overAt > 450) reset();
+      }
+
+      function die(){
+        s.state = 'over';
+        s.overAt = performance.now();
+        beep(140, 0.3, 'sawtooth', 0.04);
+        const best = getBest(KEY);
+        if (best === null || s.score > best) setBest(KEY, s.score);
+        updateScore();
+      }
+
+      function step(){
+        if (s.queue.length) s.dir = s.queue.shift();
+        const head = s.body[0];
+        const n = { x: head.x + s.dir.x, y: head.y + s.dir.y };
+        const eating = n.x === s.nut.x && n.y === s.nut.y;
+        const bodyToCheck = eating ? s.body : s.body.slice(0, -1); // the tail moves out of the way
+        if (n.x < 0 || n.y < 0 || n.x >= COLS || n.y >= ROWS || bodyToCheck.some(b => b.x === n.x && b.y === n.y)) return die();
+        s.body.unshift(n);
+        if (eating){
+          s.score++;
+          s.interval = Math.max(70, s.interval - 4);
+          beep(880, 0.06, 'triangle', 0.04);
+          updateScore();
+          placeNut();
+        } else {
+          s.body.pop();
+        }
+      }
+
+      function update(k){
+        s.t += k;
+        if (s.state !== 'play') return;
+        s.acc += k * (1000 / 60);
+        while (s.acc >= s.interval && s.state === 'play'){
+          s.acc -= s.interval;
+          step();
+        }
+      }
+
+      function nut(cx, cy, r){
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++){
+          const a = Math.PI / 6 + i * Math.PI / 3 + s.t * 0.03;
+          ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#ffc93c';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 0.38, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.bg2;
+        ctx.fill();
+      }
+
+      function draw(){
+        background(0);
+        nut(s.nut.x * C + C / 2, s.nut.y * C + C / 2, 7.5);
+        for (let i = s.body.length - 1; i >= 1; i--){
+          const b = s.body[i];
+          rrect(b.x * C + 2, b.y * C + 2, C - 4, C - 4, 5);
+          ctx.fillStyle = i % 2 ? '#c3c8ce' : '#9aa1aa';
+          ctx.fill();
+        }
+        const h = s.body[0];
+        drawBot(h.x * C + C / 2, h.y * C + C / 2 + 1, 18, {
+          eyeX: s.dir.x * 1.5, eyeY: s.dir.y * 1.5, closed: s.state === 'over'
+        });
+
+        if (s.state === 'ready'){
+          centerText('Snake', H / 2 - 90, 44);
+          smallText('arrows, WASD, swipe or the pad below', H / 2 + 60);
+        }
+        if (s.state === 'over'){
+          centerText('Game over', H / 2 - 30, 44);
+          smallText('tap to play again', H / 2 + 16);
+        }
+      }
+
+      function scoreText(){
+        const best = getBest(KEY);
+        return `nuts ${s.score} · best ${best === null ? '-' : best}`;
+      }
+
+      return { reset, press, turn, update, draw, scoreText, hint: 'Collect hex nuts, don\'t hit the walls or yourself.' };
+    })();
+
+    // ===========================================================
+    // Reflex: wait for green, then tap as fast as you can.
+    // ===========================================================
+    const Reflex = (() => {
+      const KEY = 'robot632_best_reflex';
+      let s;
+
+      function reset(){
+        if (s) clearTimeout(s.timer);
+        s = { state: 'idle', last: null, recent: [], timer: null, goAt: 0, t: 0 };
+        updateScore();
+      }
+
+      function press(){
+        const now = performance.now();
+        if (s.state === 'wait'){
+          clearTimeout(s.timer);
+          s.state = 'early';
+          beep(160, 0.2, 'sawtooth', 0.035);
+        } else if (s.state === 'go'){
+          s.last = Math.round(now - s.goAt);
+          s.recent = [s.last, ...s.recent].slice(0, 5);
+          s.state = 'result';
+          const best = getBest(KEY);
+          if (best === null || s.last < best) setBest(KEY, s.last);
+          beep(1200, 0.05, 'triangle', 0.04);
+          updateScore();
+        } else {
+          s.state = 'wait';
+          s.timer = setTimeout(() => {
+            s.state = 'go';
+            s.goAt = performance.now();
+            beep(880, 0.12, 'sine', 0.05);
+          }, 1200 + Math.random() * 2800);
+        }
+      }
+
+      function update(k){ s.t += k; }
+
+      function draw(){
+        const fills = { idle: null, wait: '#b8323a', go: '#2fb84f', early: '#e07a2c', result: '#2f6fed' };
+        if (fills[s.state]){
+          ctx.fillStyle = fills[s.state];
+          ctx.fillRect(0, 0, W, H);
+        } else {
+          background(0);
+        }
+        const bob = Math.sin(s.t / 12) * 4;
+        drawBot(W / 2, H / 2 - 40 + bob, 110, {
+          wide: s.state === 'go',
+          closed: s.state === 'early',
+          eyeColor: s.state === 'wait' ? '#ff6b6b' : undefined
+        });
+        const saved = COLORS.text;
+        if (fills[s.state]) COLORS.text = '#ffffff';
+        if (s.state === 'idle'){ centerText('Reflex', 60, 44); smallText('tap to start, then wait for green', H - 70); }
+        if (s.state === 'wait'){ centerText('wait for green...', H - 80, 34); }
+        if (s.state === 'go'){ centerText('TAP!', H - 80, 56); }
+        if (s.state === 'early'){ centerText('too soon!', H - 90, 40); smallText('tap to try again', H - 50); }
+        if (s.state === 'result'){
+          centerText(`${s.last} ms`, H - 95, 50);
+          smallText(rating(s.last) + ' · tap to go again', H - 50);
+        }
+        COLORS.text = saved;
+      }
+
+      function rating(ms){
+        if (ms < 200) return 'robot-level reflexes';
+        if (ms < 260) return 'super fast';
+        if (ms < 330) return 'nice';
+        if (ms < 450) return 'not bad';
+        return 'battery low?';
+      }
+
+      function scoreText(){
+        const best = getBest(KEY);
+        const avg = s.recent.length ? Math.round(s.recent.reduce((a, b) => a + b, 0) / s.recent.length) : null;
+        return `best ${best === null ? '-' : best + ' ms'}` + (avg === null ? '' : ` · last ${s.recent.length} avg ${avg} ms`);
+      }
+
+      function stop(){ clearTimeout(s.timer); }
+
+      return { reset, press, update, draw, scoreText, stop, hint: 'Tap the moment the screen turns green.' };
+    })();
+
+    // ===========================================================
+    // Picker, input, and the shared loop
+    // ===========================================================
+    const ARCADE = { flappy: Flappy, snake: Snake, reflex: Reflex };
+    const TITLES = { signal: 'SIGNAL SEQUENCE', flappy: 'FLAPPY ROBOT', snake: 'SNAKE', reflex: 'REFLEX' };
+    const PAGE_TITLES = { signal: 'Signal Sequence', flappy: 'Flappy Robot', snake: 'Snake', reflex: 'Reflex' };
+    const TAB_KEY = 'robot632_games_tab';
+    let current = null;
+    let currentName = null;
+    let raf = null;
+    let lastFrame = 0;
+
+    function updateScore(){
+      if (current) scoreEl.textContent = current.scoreText();
+    }
+
+    function loop(now){
+      const dt = Math.min(50, now - (lastFrame || now));
+      lastFrame = now;
+      current.update(dt / (1000 / 60));
+      current.draw();
+      raf = requestAnimationFrame(loop);
+    }
+
+    function selectGame(name, remember){
+      if (!TITLES[name]) name = 'signal';
+      if (name === currentName) return;
+      if (current && current.stop) current.stop();
+      cancelAnimationFrame(raf);
+      raf = null;
+      if (currentName === 'signal') pauseSignal();
+      if (currentName === null && name !== 'signal') clearTimeout(autoStartTimer); // no surprise auto-start
+
+      currentName = name;
+      current = ARCADE[name] || null;
+      signalView.hidden = name !== 'signal';
+      arcadeView.hidden = name === 'signal';
+      setTitle(TITLES[name]);
+      if (name === 'signal') fitDevice();
+      document.title = `Robot632 // ${PAGE_TITLES[name]}`;
+      document.querySelectorAll('.game-tab').forEach(t => {
+        const on = t.dataset.game === name;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+      });
+      if (remember){
+        try { localStorage.setItem(TAB_KEY, name); } catch (e){}
+        history.replaceState(null, '', `#${name}`);
+      }
+
+      if (current){
+        current.reset();
+        hintEl.textContent = current.hint;
+        dpad.classList.toggle('show', name === 'snake');
+        updateScore();
+        lastFrame = 0;
+        raf = requestAnimationFrame(loop);
+      }
+    }
+
+    const tabs = Array.from(document.querySelectorAll('.game-tab'));
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', (e) => {
+        selectGame(t.dataset.game, true);
+        // mouse/touch picks hand the keyboard to the game right away
+        if (e.detail > 0 && current) canvas.focus({ preventScroll: true });
+      });
+      // arrow keys move between tabs, like a normal tab list
+      t.addEventListener('keydown', (e) => {
+        const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (!step) return;
+        e.preventDefault();
+        const next = tabs[(i + step + tabs.length) % tabs.length];
+        selectGame(next.dataset.game, true);
+        next.focus();
+      });
+    });
+
+    // tap / click: press, but on Snake a swipe turns instead
+    let swipe = null;
+    canvas.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      canvas.focus({ preventScroll: true });
+      if (currentName === 'snake'){ swipe = { x: e.clientX, y: e.clientY }; return; }
+      current.press();
+    });
+    canvas.addEventListener('pointerup', (e) => {
+      if (currentName !== 'snake' || !swipe) return;
+      const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+      swipe = null;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 18){ current.press(); return; }
+      if (Math.abs(dx) > Math.abs(dy)) Snake.turn(Math.sign(dx), 0);
+      else Snake.turn(0, Math.sign(dy));
+    });
+
+    const DIRS = {
+      ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+      w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0]
+    };
+    document.addEventListener('keydown', (e) => {
+      if (!current) return;
+      if (e.target.closest && e.target.closest('.game-picker, a, .dpad, .sound-toggle')) return;
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (currentName === 'snake' && DIRS[key]){
+        e.preventDefault();
+        Snake.turn(...DIRS[key]);
+        return;
+      }
+      if (key === ' ' || key === 'Enter' || (currentName === 'flappy' && key === 'ArrowUp')){
+        e.preventDefault();
+        if (!e.repeat) current.press();
+      }
+    });
+
+    dpad.querySelectorAll('button').forEach(b => {
+      const map = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); Snake.turn(...map[b.dataset.dir]); });
+      b.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); Snake.turn(...map[b.dataset.dir]); }
+      });
+    });
+
+    let saved = null;
+    try { saved = localStorage.getItem(TAB_KEY); } catch (e){}
+    const fromHash = location.hash.slice(1);
+    selectGame(TITLES[fromHash] ? fromHash : saved, false);
+  })();
 </script>
 
 <style>

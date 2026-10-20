@@ -53,6 +53,10 @@
       <li><code>robot632_sound</code> &ndash; sound on or off</li>
       <li><code>robot632_tagline_index</code> &ndash; which tagline to show next</li>
       <li><code>robot632_visits</code> &ndash; the &ldquo;powered on X times&rdquo; counter (counted locally, not by me)</li>
+      <li><code>robot632_graphics</code> &ndash; Low or High graphics</li>
+      <li><code>robot632_pet</code> &ndash; how full Pip the pet robot is, and when you last checked on it</li>
+      <li><code>robot632_best_flappy</code>, <code>robot632_best_snake</code>, <code>robot632_best_reflex</code> &ndash; your best scores in the mini-games</li>
+      <li><code>robot632_games_tab</code> &ndash; which game you picked last</li>
     </ul>
     <p>Because these are strictly functional and never sent to me or to anyone else, no cookie banner is needed.</p>
     <p><strong>Delete your data:</strong> there is nothing stored on a server, so there is nothing for me to delete. You can remove the settings above from your device at any time:</p>
@@ -96,6 +100,7 @@
     <ul>
       <li>Click sound &ldquo;Mouse Click Sound&rdquo; by Pixeliota on Freesound, CC0 (public domain).</li>
       <li>Fonts (Nunito, Caveat, Bangers, Permanent Marker, Kalam, Chewy, Rubik, Space Mono, VT323) from Google Fonts, under the SIL Open Font License.</li>
+      <li>Settings gear icon from Google's Material Icons, under the Apache License 2.0.</li>
       <li>Roblox is a trademark of Roblox Corporation. This site is not affiliated with, endorsed by or sponsored by Roblox.</li>
       <li>Vector 2.0 and its packaging (shown in the box photos on the terminal page) are products and trademarks of Digital Dream Labs (<a href="https://anki.bot/" rel="noopener">anki.bot</a>). This site is not affiliated with or endorsed by them. The &ldquo;toast-rebuild-ios6&rdquo; image was made by Toastito (<a href="https://toastito.co.uk/index.html" rel="noopener">toastito.co.uk</a>), not by me, and is shown with credit. These are shown only to talk about my own device. All other names belong to their owners.</li>
     </ul>
@@ -110,7 +115,7 @@
   document.getElementById('clear-btn').addEventListener('click', function(){
     var status = document.getElementById('clear-status');
     try {
-      ['robot632_theme','robot632_sound','robot632_tagline_index','robot632_visits'].forEach(function(k){ localStorage.removeItem(k); });
+      ['robot632_theme','robot632_sound','robot632_tagline_index','robot632_visits','robot632_graphics','robot632_pet','robot632_best_flappy','robot632_best_snake','robot632_best_reflex','robot632_games_tab'].forEach(function(k){ localStorage.removeItem(k); });
       status.textContent = 'Done. Saved settings removed from this device.';
     } catch(e){
       status.textContent = 'Could not access browser storage (nothing to clear).';
