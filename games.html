@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot632 · Games</title>
+<meta name="description" content="Robot632 - tiny robot mini-games: Flappy Robot, Snake and Reflex.">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script>
+  (function(){
+    var saved = null;
+    try { saved = localStorage.getItem('robot632_theme'); } catch(e){}
+    var preferred = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.documentElement.dataset.theme = preferred;
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Bangers&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='8' r='8' fill='%23e4e7eb'/><rect x='46' y='6' width='8' height='20' fill='%23e4e7eb'/><rect x='8' y='22' width='84' height='78' rx='15' fill='%23e4e7eb'/><rect x='20' y='46' width='60' height='28' rx='9' fill='%232c2f34'/><circle cx='38' cy='60' r='6.5' fill='%23e4e7eb'/><circle cx='62' cy='60' r='6.5' fill='%23e4e7eb'/></svg>">
+<style>
+  /* same surface palette as index.html */
+  :root{
+    --bg: #007a7a;
+    --bg-deep: #005f5f;
+    --text: #ffffff;
+    --text-shadow: rgba(0,0,0,0.18);
+    --panel-bg: rgba(0,0,0,0.14);
+    --panel-border: rgba(255,255,255,0.18);
+    --panel-line: rgba(255,255,255,0.14);
+    --grid-line: rgba(255,255,255,0.06);
+    --blue: #2f6fed;
+    --green: #2fb84f;
+    --orange: #ff8a3d;
+    --pink: #ff6fc1;
+  }
+  html[data-theme="light"]{
+    --bg: #eafaf6;
+    --bg-deep: #ffffff;
+    --text: #08403f;
+    --text-shadow: rgba(0,0,0,0.08);
+    --panel-bg: rgba(255,255,255,0.55);
+    --panel-border: rgba(0,90,90,0.15);
+    --panel-line: rgba(0,90,90,0.12);
+    --grid-line: rgba(0,90,90,0.10);
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    min-height:100dvh;
+    background: radial-gradient(circle at 50% -10%, var(--bg-deep), var(--bg) 55%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    display:flex;
+    justify-content:center;
+    padding: 14px;
+  }
+  body::before{
+    content:'';
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 34px 34px;
+  }
+
+  .panel{
+    position:relative;
+    width:100%;
+    max-width: 560px;
+    background: var(--panel-bg);
+    border: 2px solid var(--panel-border);
+    border-radius: 24px;
+    padding: 22px 16px 24px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap: 14px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.25);
+  }
+
+  .back{
+    position:absolute;
+    top:16px;
+    left:18px;
+    color: var(--text);
+    font-weight:800;
+    font-size:14px;
+    text-decoration:none;
+    opacity:0.8;
+  }
+  .back:hover{ opacity:1; text-decoration:underline; }
+
+  h1{
+    font-family: 'Bangers', cursive;
+    font-weight:400;
+    font-size: clamp(34px, 9vw, 48px);
+    letter-spacing: 0.04em;
+    margin: 8px 0 0;
+    text-shadow: 0 2px 6px var(--text-shadow);
+  }
+
+  .tabs{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap: 10px;
+  }
+  .tab{
+    --c: var(--blue);
+    border:none;
+    cursor:pointer;
+    min-width: 104px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    color:#fff;
+    font: 800 15px 'Nunito', sans-serif;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--c) 75%, white) 0%, var(--c) 45%, color-mix(in srgb, var(--c) 80%, black) 100%);
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,0.5),
+      0 5px 0 color-mix(in srgb, var(--c) 55%, black),
+      0 9px 14px rgba(0,0,0,0.28);
+    opacity: 0.7;
+    transition: transform 0.08s ease, opacity 0.15s ease;
+  }
+  .tab[aria-selected="true"]{ opacity:1; }
+  .tab:active{ transform: translateY(5px); box-shadow: inset 0 3px 8px rgba(0,0,0,0.4); }
+  .tab[data-game="flappy"]{ --c: var(--blue); }
+  .tab[data-game="snake"]{ --c: var(--green); }
+  .tab[data-game="reflex"]{ --c: var(--orange); }
+
+  .stage{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap: 10px;
+    width:100%;
+  }
+  canvas{
+    display:block;
+    width: min(100%, 360px, calc((100dvh - 330px) * 0.818));
+    min-width: 220px;
+    aspect-ratio: 360 / 440;
+    border-radius: 18px;
+    border: 2px solid var(--panel-border);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.3);
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  .score{
+    font-weight:800;
+    font-size:16px;
+    margin:0;
+  }
+  .hint{
+    font-weight:700;
+    font-size:13px;
+    opacity:0.75;
+    margin:-6px 0 0;
+    text-align:center;
+  }
+
+  .dpad{
+    display:none;
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(2, 44px);
+    gap: 6px;
+  }
+  .dpad.show{ display:grid; }
+  .dpad button{
+    border:none;
+    border-radius:12px;
+    font-size:20px;
+    color: var(--text);
+    background: var(--panel-bg);
+    border: 2px solid var(--panel-border);
+    cursor:pointer;
+    touch-action: manipulation;
+  }
+  .dpad button:active{ transform: translateY(2px); }
+  .dpad [data-dir="up"]{ grid-column:2; grid-row:1; }
+  .dpad [data-dir="left"]{ grid-column:1; grid-row:2; }
+  .dpad [data-dir="down"]{ grid-column:2; grid-row:2; }
+  .dpad [data-dir="right"]{ grid-column:3; grid-row:2; }
+
+  :focus-visible{ outline:3px solid #ffd54a; outline-offset:3px; }
+  /* in the page flow here (not fixed like on other pages) so it never
+     covers the snake controls on a phone */
+  .legal-link{ margin-top:6px;
+    font:12px/1 system-ui,-apple-system,'Segoe UI',sans-serif; padding:6px 12px; border-radius:999px;
+    background:rgba(0,0,0,0.72); color:#fff; text-decoration:none; white-space:nowrap; }
+  .legal-link:hover{ text-decoration:underline; }
+</style>
+</head>
+<body>
+  <main class="panel">
+    <a class="back" href="index.html">&larr; back</a>
+    <h1>Robot Arcade</h1>
+
+    <div class="tabs" role="tablist" aria-label="Games">
+      <button class="tab" role="tab" type="button" data-game="flappy" aria-controls="game">Flappy Robot</button>
+      <button class="tab" role="tab" type="button" data-game="snake" aria-controls="game">Snake</button>
+      <button class="tab" role="tab" type="button" data-game="reflex" aria-controls="game">Reflex</button>
+    </div>
+
+    <div class="stage">
+      <canvas id="game" width="360" height="440" tabindex="0" aria-label="Game area"></canvas>
+      <p class="score" id="score" aria-live="polite"></p>
+      <p class="hint" id="hint"></p>
+      <div class="dpad" id="dpad" aria-label="Snake controls">
+        <button type="button" data-dir="up" aria-label="Up">▲</button>
+        <button type="button" data-dir="left" aria-label="Left">◀</button>
+        <button type="button" data-dir="down" aria-label="Down">▼</button>
+        <button type="button" data-dir="right" aria-label="Right">▶</button>
+      </div>
+    </div>
+    <a class="legal-link" href="privacy.html">Privacy &amp; terms</a>
+  </main>
+
+  <script>
+    // -----------------------------------------------------------
+    // Robot Arcade: three tiny canvas games sharing one canvas and
+    // one loop. Each game is an object with reset / press / update /
+    // draw / scoreText (and optional turn / stop). Best scores live
+    // in localStorage on this device only, like the rest of the
+    // site's settings.
+    // -----------------------------------------------------------
+    const W = 360, H = 440;
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const hintEl = document.getElementById('hint');
+    const dpad = document.getElementById('dpad');
+
+    (function setupCanvas(){
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    })();
+
+    const LIGHT = document.documentElement.dataset.theme === 'light';
+    const COLORS = LIGHT
+      ? { bg1: '#dff6f1', bg2: '#bfe9e1', grid: 'rgba(0,90,90,0.10)', text: '#08403f', shade: 'rgba(255,255,255,0.75)' }
+      : { bg1: '#06504f', bg2: '#033838', grid: 'rgba(255,255,255,0.06)', text: '#ffffff', shade: 'rgba(0,0,0,0.45)' };
+
+    function getBest(key){
+      try { const v = parseInt(localStorage.getItem(key), 10); return isNaN(v) ? null : v; } catch (e){ return null; }
+    }
+    function setBest(key, v){
+      try { localStorage.setItem(key, v); } catch (e){}
+    }
+
+    // sound follows the site-wide mute toggle on the home page
+    let actx = null;
+    function beep(freq, duration = 0.08, type = 'square', volume = 0.04){
+      let on = true;
+      try { on = localStorage.getItem('robot632_sound') !== 'off'; } catch (e){}
+      if (!on) return;
+      try{
+        actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+        const o = actx.createOscillator();
+        const g = actx.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(freq, actx.currentTime);
+        g.gain.setValueAtTime(volume, actx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + duration);
+        o.connect(g).connect(actx.destination);
+        o.start();
+        o.stop(actx.currentTime + duration);
+      } catch (e){}
+    }
+
+    // ---------- shared drawing helpers ----------
+    function rrect(x, y, w, h, r){
+      ctx.beginPath();
+      if (ctx.roundRect){ ctx.roundRect(x, y, w, h, r); return; }
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function background(offset = 0){
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, COLORS.bg1);
+      g.addColorStop(1, COLORS.bg2);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = COLORS.grid;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = -(offset % 34); x < W; x += 34){ ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H); }
+      for (let y = 0; y < H; y += 34){ ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); }
+      ctx.stroke();
+    }
+
+    // the site's robot head, drawn at (x, y) with face width s
+    function drawBot(x, y, s, opt = {}){
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(opt.angle || 0);
+      // antenna
+      ctx.fillStyle = '#7a828d';
+      ctx.fillRect(-s * 0.04, -s * 0.78, s * 0.08, s * 0.3);
+      ctx.beginPath();
+      ctx.arc(0, -s * 0.8, s * 0.1, 0, Math.PI * 2);
+      ctx.fillStyle = opt.light || '#e4e7eb';
+      ctx.fill();
+      // face
+      const fg = ctx.createLinearGradient(-s / 2, -s / 2, s / 2, s / 2);
+      fg.addColorStop(0, '#f6f7f8');
+      fg.addColorStop(0.5, '#e4e7eb');
+      fg.addColorStop(1, '#9aa1aa');
+      rrect(-s / 2, -s / 2, s, s, s * 0.22);
+      ctx.fillStyle = fg;
+      ctx.fill();
+      // visor
+      rrect(-s * 0.38, -s * 0.14, s * 0.76, s * 0.36, s * 0.13);
+      ctx.fillStyle = '#2c2f34';
+      ctx.fill();
+      // eyes
+      const ex = opt.eyeX || 0, ey = opt.eyeY || 0;
+      ctx.fillStyle = opt.eyeColor || '#ffffff';
+      ctx.shadowColor = opt.eyeColor || 'rgba(255,255,255,0.8)';
+      ctx.shadowBlur = s * 0.12;
+      for (const side of [-1, 1]){
+        ctx.beginPath();
+        if (opt.closed) ctx.ellipse(side * s * 0.17 + ex, s * 0.04, s * 0.09, s * 0.018, 0, 0, Math.PI * 2);
+        else ctx.arc(side * s * 0.17 + ex, s * 0.04 + ey, s * (opt.wide ? 0.105 : 0.08), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function centerText(text, y, size, alpha = 1){
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = `${size}px Bangers, 'Nunito', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = COLORS.shade;
+      ctx.strokeText(text, W / 2, y);
+      ctx.fillStyle = COLORS.text;
+      ctx.fillText(text, W / 2, y);
+      ctx.restore();
+    }
+
+    function smallText(text, y){
+      ctx.save();
+      ctx.font = `800 15px Nunito, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = COLORS.text;
+      ctx.globalAlpha = 0.85;
+      ctx.fillText(text, W / 2, y);
+      ctx.restore();
+    }
+
+    // ===========================================================
+    // Flappy Robot: tap to fire the thrusters, dodge the pillars.
+    // ===========================================================
+    const Flappy = (() => {
+      const KEY = 'robot632_best_flappy';
+      const GROUND = H - 40;
+      const BX = 96, R = 15, PW = 58, GAP = 140, SPEED = 2.4;
+      let s;
+
+      function reset(){
+        s = { state: 'ready', y: H / 2 - 30, vy: 0, pipes: [], score: 0, t: 0, scroll: 0, overAt: 0, flame: 0 };
+        updateScore();
+      }
+
+      function flap(){
+        s.vy = -7;
+        s.flame = 8;
+        beep(620, 0.05, 'square', 0.025);
+      }
+
+      function die(){
+        s.state = 'over';
+        s.overAt = performance.now();
+        beep(140, 0.3, 'sawtooth', 0.04);
+        const best = getBest(KEY);
+        if (best === null || s.score > best) setBest(KEY, s.score);
+        updateScore();
+      }
+
+      function press(){
+        if (s.state === 'ready'){ s.state = 'play'; flap(); }
+        else if (s.state === 'play') flap();
+        else if (performance.now() - s.overAt > 450) reset();
+      }
+
+      function update(k){
+        s.t += k;
+        if (s.flame > 0) s.flame -= k;
+        if (s.state !== 'over') s.scroll += SPEED * k;
+        if (s.state === 'ready'){ s.y = H / 2 - 30 + Math.sin(s.t / 10) * 7; return; }
+        if (s.state === 'over'){
+          if (s.y < GROUND - R){ s.vy += 0.5 * k; s.y = Math.min(GROUND - R, s.y + s.vy * k); }
+          return;
+        }
+        s.vy = Math.min(10, s.vy + 0.42 * k);
+        s.y += s.vy * k;
+        if (s.y < R){ s.y = R; s.vy = 0; }
+
+        const last = s.pipes[s.pipes.length - 1];
+        if (!last || last.x < W - 200) s.pipes.push({ x: W + 10, gapY: 50 + Math.random() * (GROUND - GAP - 100), passed: false });
+        for (const p of s.pipes){
+          p.x -= SPEED * k;
+          if (!p.passed && p.x + PW < BX - R){
+            p.passed = true;
+            s.score++;
+            beep(980, 0.07, 'triangle', 0.04);
+            updateScore();
+          }
+        }
+        s.pipes = s.pipes.filter(p => p.x > -PW - 10);
+
+        if (s.y + R >= GROUND) return die();
+        for (const p of s.pipes){
+          if (BX + R - 3 > p.x && BX - R + 3 < p.x + PW && (s.y - R + 3 < p.gapY || s.y + R - 3 > p.gapY + GAP)) return die();
+        }
+      }
+
+      function pillar(x, y, h, capAtBottom){
+        const g = ctx.createLinearGradient(x, 0, x + PW, 0);
+        g.addColorStop(0, '#5b626c');
+        g.addColorStop(0.35, '#c3c8ce');
+        g.addColorStop(1, '#4b525c');
+        ctx.fillStyle = g;
+        ctx.fillRect(x + 4, y, PW - 8, h);
+        const capY = capAtBottom ? y + h - 16 : y;
+        rrect(x, capY, PW, 16, 4);
+        ctx.fill();
+        // rivets on the cap
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        for (const rx of [x + 9, x + PW - 9]){
+          ctx.beginPath();
+          ctx.arc(rx, capY + 8, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function draw(){
+        background(s.scroll * 0.3);
+        for (const p of s.pipes){
+          pillar(p.x, 0, p.gapY, true);
+          pillar(p.x, p.gapY + GAP, GROUND - p.gapY - GAP, false);
+        }
+        // ground: hazard stripes
+        ctx.fillStyle = '#2f3238';
+        ctx.fillRect(0, GROUND, W, H - GROUND);
+        ctx.fillStyle = '#ffc93c';
+        for (let x = -(s.scroll % 24); x < W; x += 24){
+          ctx.beginPath();
+          ctx.moveTo(x, GROUND); ctx.lineTo(x + 12, GROUND); ctx.lineTo(x + 4, GROUND + 10); ctx.lineTo(x - 8, GROUND + 10);
+          ctx.fill();
+        }
+        // thruster flame
+        if (s.flame > 0 && s.state === 'play'){
+          ctx.fillStyle = 'rgba(255,150,60,0.9)';
+          ctx.beginPath();
+          ctx.moveTo(BX - 8, s.y + R + 2);
+          ctx.lineTo(BX + 8, s.y + R + 2);
+          ctx.lineTo(BX, s.y + R + 6 + s.flame * 2);
+          ctx.fill();
+        }
+        const angle = s.state === 'ready' ? 0 : Math.max(-0.5, Math.min(1.1, s.vy * 0.08));
+        drawBot(BX, s.y, R * 2, { angle, closed: s.state === 'over', eyeX: 2 });
+
+        if (s.state !== 'ready') centerText(String(s.score), 50, 46);
+        if (s.state === 'ready'){
+          centerText('Flappy Robot', H / 2 - 120, 40);
+          smallText('tap, click or press space', H / 2 + 50);
+        }
+        if (s.state === 'over'){
+          centerText('Crashed!', H / 2 - 40, 44);
+          smallText('tap to try again', H / 2 + 6);
+        }
+      }
+
+      function scoreText(){
+        const best = getBest(KEY);
+        return `score ${s.score} · best ${best === null ? '-' : best}`;
+      }
+
+      return { reset, press, update, draw, scoreText, hint: 'Tap / click / space to fire the thrusters. Dodge the pillars.' };
+    })();
+
+    // ===========================================================
+    // Snake: a robot head collecting hex nuts.
+    // ===========================================================
+    const Snake = (() => {
+      const KEY = 'robot632_best_snake';
+      const C = 20, COLS = W / C, ROWS = H / C;
+      let s;
+
+      function placeNut(){
+        let f;
+        do { f = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) }; }
+        while (s.body.some(b => b.x === f.x && b.y === f.y));
+        s.nut = f;
+      }
+
+      function reset(){
+        s = {
+          state: 'ready',
+          body: [{ x: 8, y: 11 }, { x: 7, y: 11 }, { x: 6, y: 11 }],
+          dir: { x: 1, y: 0 },
+          queue: [],
+          acc: 0,
+          interval: 150,
+          score: 0,
+          overAt: 0,
+          t: 0
+        };
+        placeNut();
+        updateScore();
+      }
+
+      function turn(dx, dy){
+        if (s.state === 'over') return;
+        if (s.state === 'ready') s.state = 'play';
+        const last = s.queue.length ? s.queue[s.queue.length - 1] : s.dir;
+        if ((last.x === -dx && last.y === -dy) || (last.x === dx && last.y === dy)) return;
+        if (s.queue.length < 3) s.queue.push({ x: dx, y: dy });
+      }
+
+      function press(){
+        if (s.state === 'ready') s.state = 'play';
+        else if (s.state === 'over' && performance.now() - s.overAt > 450) reset();
+      }
+
+      function die(){
+        s.state = 'over';
+        s.overAt = performance.now();
+        beep(140, 0.3, 'sawtooth', 0.04);
+        const best = getBest(KEY);
+        if (best === null || s.score > best) setBest(KEY, s.score);
+        updateScore();
+      }
+
+      function step(){
+        if (s.queue.length) s.dir = s.queue.shift();
+        const head = s.body[0];
+        const n = { x: head.x + s.dir.x, y: head.y + s.dir.y };
+        const eating = n.x === s.nut.x && n.y === s.nut.y;
+        const bodyToCheck = eating ? s.body : s.body.slice(0, -1); // the tail moves out of the way
+        if (n.x < 0 || n.y < 0 || n.x >= COLS || n.y >= ROWS || bodyToCheck.some(b => b.x === n.x && b.y === n.y)) return die();
+        s.body.unshift(n);
+        if (eating){
+          s.score++;
+          s.interval = Math.max(70, s.interval - 4);
+          beep(880, 0.06, 'triangle', 0.04);
+          updateScore();
+          placeNut();
+        } else {
+          s.body.pop();
+        }
+      }
+
+      function update(k){
+        s.t += k;
+        if (s.state !== 'play') return;
+        s.acc += k * (1000 / 60);
+        while (s.acc >= s.interval && s.state === 'play'){
+          s.acc -= s.interval;
+          step();
+        }
+      }
+
+      function nut(cx, cy, r){
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++){
+          const a = Math.PI / 6 + i * Math.PI / 3 + s.t * 0.03;
+          ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#ffc93c';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 0.38, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.bg2;
+        ctx.fill();
+      }
+
+      function draw(){
+        background(0);
+        nut(s.nut.x * C + C / 2, s.nut.y * C + C / 2, 7.5);
+        for (let i = s.body.length - 1; i >= 1; i--){
+          const b = s.body[i];
+          rrect(b.x * C + 2, b.y * C + 2, C - 4, C - 4, 5);
+          ctx.fillStyle = i % 2 ? '#c3c8ce' : '#9aa1aa';
+          ctx.fill();
+        }
+        const h = s.body[0];
+        drawBot(h.x * C + C / 2, h.y * C + C / 2 + 1, 18, {
+          eyeX: s.dir.x * 1.5, eyeY: s.dir.y * 1.5, closed: s.state === 'over'
+        });
+
+        if (s.state === 'ready'){
+          centerText('Snake', H / 2 - 90, 44);
+          smallText('arrows, WASD, swipe or the pad below', H / 2 + 60);
+        }
+        if (s.state === 'over'){
+          centerText('Game over', H / 2 - 30, 44);
+          smallText('tap to play again', H / 2 + 16);
+        }
+      }
+
+      function scoreText(){
+        const best = getBest(KEY);
+        return `nuts ${s.score} · best ${best === null ? '-' : best}`;
+      }
+
+      return { reset, press, turn, update, draw, scoreText, hint: 'Collect hex nuts, don\'t hit the walls or yourself.' };
+    })();
+
+    // ===========================================================
+    // Reflex: wait for green, then tap as fast as you can.
+    // ===========================================================
+    const Reflex = (() => {
+      const KEY = 'robot632_best_reflex';
+      let s;
+
+      function reset(){
+        if (s) clearTimeout(s.timer);
+        s = { state: 'idle', last: null, recent: [], timer: null, goAt: 0, t: 0 };
+        updateScore();
+      }
+
+      function press(){
+        const now = performance.now();
+        if (s.state === 'wait'){
+          clearTimeout(s.timer);
+          s.state = 'early';
+          beep(160, 0.2, 'sawtooth', 0.035);
+        } else if (s.state === 'go'){
+          s.last = Math.round(now - s.goAt);
+          s.recent = [s.last, ...s.recent].slice(0, 5);
+          s.state = 'result';
+          const best = getBest(KEY);
+          if (best === null || s.last < best) setBest(KEY, s.last);
+          beep(1200, 0.05, 'triangle', 0.04);
+          updateScore();
+        } else {
+          s.state = 'wait';
+          s.timer = setTimeout(() => {
+            s.state = 'go';
+            s.goAt = performance.now();
+            beep(880, 0.12, 'sine', 0.05);
+          }, 1200 + Math.random() * 2800);
+        }
+      }
+
+      function update(k){ s.t += k; }
+
+      function draw(){
+        const fills = { idle: null, wait: '#b8323a', go: '#2fb84f', early: '#e07a2c', result: '#2f6fed' };
+        if (fills[s.state]){
+          ctx.fillStyle = fills[s.state];
+          ctx.fillRect(0, 0, W, H);
+        } else {
+          background(0);
+        }
+        const bob = Math.sin(s.t / 12) * 4;
+        drawBot(W / 2, H / 2 - 40 + bob, 110, {
+          wide: s.state === 'go',
+          closed: s.state === 'early',
+          eyeColor: s.state === 'wait' ? '#ff6b6b' : undefined
+        });
+        const saved = COLORS.text;
+        if (fills[s.state]) COLORS.text = '#ffffff';
+        if (s.state === 'idle'){ centerText('Reflex', 60, 44); smallText('tap to start, then wait for green', H - 70); }
+        if (s.state === 'wait'){ centerText('wait for green...', H - 80, 34); }
+        if (s.state === 'go'){ centerText('TAP!', H - 80, 56); }
+        if (s.state === 'early'){ centerText('too soon!', H - 90, 40); smallText('tap to try again', H - 50); }
+        if (s.state === 'result'){
+          centerText(`${s.last} ms`, H - 95, 50);
+          smallText(rating(s.last) + ' · tap to go again', H - 50);
+        }
+        COLORS.text = saved;
+      }
+
+      function rating(ms){
+        if (ms < 200) return 'robot-level reflexes';
+        if (ms < 260) return 'super fast';
+        if (ms < 330) return 'nice';
+        if (ms < 450) return 'not bad';
+        return 'battery low?';
+      }
+
+      function scoreText(){
+        const best = getBest(KEY);
+        const avg = s.recent.length ? Math.round(s.recent.reduce((a, b) => a + b, 0) / s.recent.length) : null;
+        return `best ${best === null ? '-' : best + ' ms'}` + (avg === null ? '' : ` · last ${s.recent.length} avg ${avg} ms`);
+      }
+
+      function stop(){ clearTimeout(s.timer); }
+
+      return { reset, press, update, draw, scoreText, stop, hint: 'Tap the moment the screen turns green.' };
+    })();
+
+    // ===========================================================
+    // Switching games, input, and the shared loop
+    // ===========================================================
+    const GAMES = { flappy: Flappy, snake: Snake, reflex: Reflex };
+    const TAB_KEY = 'robot632_games_tab';
+    let current = null;
+    let currentName = null;
+
+    function updateScore(){
+      if (current) scoreEl.textContent = current.scoreText();
+    }
+
+    function selectGame(name){
+      if (!GAMES[name]) name = 'flappy';
+      if (current && current.stop) current.stop();
+      currentName = name;
+      current = GAMES[name];
+      current.reset();
+      hintEl.textContent = current.hint;
+      dpad.classList.toggle('show', name === 'snake');
+      document.querySelectorAll('.tab').forEach(t => {
+        const on = t.dataset.game === name;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+      });
+      try { localStorage.setItem(TAB_KEY, name); } catch (e){}
+      updateScore();
+    }
+
+    document.querySelectorAll('.tab').forEach(t => {
+      t.addEventListener('click', () => { selectGame(t.dataset.game); canvas.focus({ preventScroll: true }); });
+    });
+
+    // tap / click: press, but on Snake a swipe turns instead
+    let swipe = null;
+    canvas.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      canvas.focus({ preventScroll: true });
+      if (currentName === 'snake'){ swipe = { x: e.clientX, y: e.clientY }; return; }
+      current.press();
+    });
+    canvas.addEventListener('pointerup', (e) => {
+      if (currentName !== 'snake' || !swipe) return;
+      const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+      swipe = null;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 18){ current.press(); return; }
+      if (Math.abs(dx) > Math.abs(dy)) Snake.turn(Math.sign(dx), 0);
+      else Snake.turn(0, Math.sign(dy));
+    });
+
+    const DIRS = {
+      ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+      w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0]
+    };
+    document.addEventListener('keydown', (e) => {
+      if (e.target.closest && e.target.closest('.tabs, .back, .dpad, .legal-link')) return;
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (currentName === 'snake' && DIRS[key]){
+        e.preventDefault();
+        Snake.turn(...DIRS[key]);
+        return;
+      }
+      if (key === ' ' || key === 'Enter' || (currentName === 'flappy' && key === 'ArrowUp')){
+        e.preventDefault();
+        if (!e.repeat) current.press();
+      }
+    });
+
+    dpad.querySelectorAll('button').forEach(b => {
+      const map = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); Snake.turn(...map[b.dataset.dir]); });
+      b.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); Snake.turn(...map[b.dataset.dir]); }
+      });
+    });
+
+    let lastFrame = 0;
+    function loop(now){
+      const dt = Math.min(50, now - (lastFrame || now));
+      lastFrame = now;
+      current.update(dt / (1000 / 60));
+      current.draw();
+      requestAnimationFrame(loop);
+    }
+
+    let savedTab = null;
+    try { savedTab = localStorage.getItem(TAB_KEY); } catch (e){}
+    selectGame(savedTab);
+    document.fonts.ready.then(() => requestAnimationFrame(loop));
+  </script>
+</body>
+</html>
