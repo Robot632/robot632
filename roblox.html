@@ -461,6 +461,7 @@
   .sort-select option{ color:#1a1a1a; }
 
   .project-list{ display:flex; flex-direction:column; gap:14px; }
+  .projects-empty{ margin:0; text-align:center; font-weight:700; opacity:0.8; }
 
   /* project card: the top part opens the details, Play launches the game */
   .card-open{
@@ -550,7 +551,7 @@
         <span>R</span><span>o</span><span>b</span><span>l</span><span>o</span><span>x</span>
       </h1>
     </div>
-    <p class="subtitle">games i've built and the group behind some of them, with stats pulled from Roblox every hour</p>
+    <p class="subtitle">every game from my Roblox group, pulled straight from Roblox every hour</p>
 
     <div class="totals" aria-label="All games together">
       <div class="total"><b id="total-visits">–</b><span>total visits</span></div>
@@ -562,7 +563,7 @@
     <div class="section">
       <p class="section-label">Community</p>
       <a class="group-card" id="group-card" href="https://www.roblox.com/communities/537398362/Robot632-Games" target="_blank" rel="noopener">
-        <img src="https://tr.rbxcdn.com/180DAY-d35337eb25f365077589b7817efaead8/150/150/Image/Png/noFilter" alt="Robot632 Games icon">
+        <img id="group-icon" src="https://tr.rbxcdn.com/180DAY-d35337eb25f365077589b7817efaead8/150/150/Image/Png/noFilter" alt="Robot632 Games icon">
         <div class="group-info">
           <span class="name">Robot632 Games</span>
           <span class="meta" id="group-members">Founded 2025</span>
@@ -582,7 +583,6 @@
       <div class="section-head">
         <p class="section-label">Projects</p>
         <select class="sort-select" id="sort-select" aria-label="Sort projects">
-          <option value="default">Featured</option>
           <option value="visits">Most visited</option>
           <option value="newest">Newest</option>
           <option value="updated">Recently updated</option>
@@ -591,32 +591,9 @@
         </select>
       </div>
 
-      <!--
-        One <article> per game. data-place-id is all the live stats need.
-        data-description is shown in the details window when Roblox's
-        own description can't be loaded; data-notes is a JSON list of
-        short "what changed" lines for the details window (leave it []
-        to hide that part).
-      -->
-      <div class="project-list" id="project-list">
-        <article class="project-card" style="--pill-color: var(--blue);"
-           data-place-id="126791245680041"
-           data-name="Steal a User"
-           data-genre="Simulation · Tycoon"
-           data-thumb="https://tr.rbxcdn.com/180DAY-360630a5d4f680e7450c46e5971edd24/500/280/Image/Jpeg/noFilter"
-           data-description=""
-           data-notes='[]'>
-        </article>
-
-        <article class="project-card" style="--pill-color: var(--orange);"
-           data-place-id="73560747992308"
-           data-name="Sunete Linia 72"
-           data-genre="Entertainment · Music &amp; Audio"
-           data-thumb="https://tr.rbxcdn.com/180DAY-d634b5523d05789e8adcca0a7eae7382/500/280/Image/Jpeg/noFilter"
-           data-description=""
-           data-notes='[]'>
-        </article>
-      </div>
+      <!-- filled from roblox-stats.json: every public game of the group -->
+      <div class="project-list" id="project-list"></div>
+      <p class="projects-empty" id="projects-empty" hidden>The group's games load from Roblox every hour. Check back soon!</p>
     </div>
 
     <dialog class="game-dialog" id="game-dialog" aria-labelledby="dlg-name">
@@ -777,22 +754,29 @@
     });
 
     // -----------------------------------------------------------
-    // Projects. Each <article class="project-card"> only carries its
-    // place id and a few baked-in details (name, genre, thumbnail,
-    // optional description / notes); the card itself is built here.
-    //
-    // Stats: Roblox's APIs can't be read from a visitor's browser (no
-    // CORS), so a GitHub Action fetches them every hour into
-    // roblox-stats.json on this same site (scripts/roblox-stats.mjs).
-    // The page reads that file. There is no made-up fallback: if the
-    // file is missing, the numbers show "–".
+    // Projects. Nothing here is hand-picked: a GitHub Action
+    // (scripts/roblox-stats.mjs, every hour) asks Roblox which public
+    // games the group has, with names, genres, thumbnails and stats,
+    // and saves them in roblox-stats.json on this same site. Roblox's
+    // APIs can't be read from a visitor's browser (no CORS), which is
+    // why it goes through that file. A new game in the group shows up
+    // here after the next run; there is no made-up fallback, so with
+    // no data yet the numbers show "–".
     // -----------------------------------------------------------
     const GROUP_ID = 537398362;
     const GOALS = [10, 25, 50, 100, 250, 500, 1000, 5000, 10000];
     const NO_DATA = '–';
+    const CARD_COLORS = ['var(--blue)', 'var(--orange)', 'var(--green)', 'var(--pink)', 'var(--roblox-red)'];
+    // Optional "What changed" lines for the details window, keyed by
+    // place id, e.g. { '126791245680041': ['new map', 'fixed lag'] }
+    const GAME_NOTES = {};
+
     const listEl = document.getElementById('project-list');
-    const cards = Array.from(listEl.querySelectorAll('.project-card'));
-    const live = new Map(); // card -> latest game data from roblox-stats.json
+    const emptyEl = document.getElementById('projects-empty');
+    const cardsByPlace = new Map(); // placeId -> <article>
+    const live = new Map();         // <article> -> game data from roblox-stats.json
+    let cards = [];
+    let fetchedAt = null;
 
     const playUrl = (card) => `https://www.roblox.com/games/start?placeId=${card.dataset.placeId}`;
     const pageUrl = (card) => `https://www.roblox.com/games/${card.dataset.placeId}`;
@@ -815,8 +799,18 @@
       `).join('');
     }
 
-    cards.forEach((card, i) => {
-      card.dataset.order = i;
+    function playedTrophy(){
+      if (window.R632Ach) R632Ach.unlock('roblox_play');
+    }
+
+    // builds the card for a game the first time it's seen
+    function cardFor(game){
+      const key = String(game.placeId);
+      if (cardsByPlace.has(key)) return cardsByPlace.get(key);
+      const card = document.createElement('article');
+      card.className = 'project-card';
+      card.dataset.placeId = key;
+      card.style.setProperty('--pill-color', CARD_COLORS[cardsByPlace.size % CARD_COLORS.length]);
       card.innerHTML = `
         <button type="button" class="card-open" aria-haspopup="dialog">
           <img class="project-thumb" alt="">
@@ -831,20 +825,12 @@
           <span class="updated"></span>
         </div>
       `;
-      card.querySelector('.project-thumb').src = card.dataset.thumb;
-      card.querySelector('.project-thumb').alt = `${card.dataset.name} thumbnail`;
-      card.querySelector('.project-name').textContent = card.dataset.name;
-      card.querySelector('.project-genre').textContent = card.dataset.genre;
-      card.querySelector('.card-open').setAttribute('aria-label', `${card.dataset.name}: details`);
       const play = card.querySelector('.play-btn');
       play.href = playUrl(card);
-      play.setAttribute('aria-label', `Play ${card.dataset.name} on Roblox`);
       play.addEventListener('click', playedTrophy);
       card.querySelector('.card-open').addEventListener('click', () => openDetails(card));
-    });
-
-    function playedTrophy(){
-      if (window.R632Ach) R632Ach.unlock('roblox_play');
+      cardsByPlace.set(key, card);
+      return card;
     }
 
     function paintStats(root, data){
@@ -859,13 +845,19 @@
     }
 
     function paintCard(card){
-      const data = live.get(card) || null;
+      const data = live.get(card) || {};
+      const name = data.name || 'Untitled game';
+      const thumb = card.querySelector('.project-thumb');
+      if (data.thumbnail && thumb.getAttribute('src') !== data.thumbnail) thumb.src = data.thumbnail;
+      thumb.alt = `${name} thumbnail`;
+      card.querySelector('.project-name').textContent = name;
+      card.querySelector('.project-genre').textContent = data.genre || 'Roblox game';
+      card.querySelector('.card-open').setAttribute('aria-label', `${name}: details`);
+      card.querySelector('.play-btn').setAttribute('aria-label', `Play ${name} on Roblox`);
       paintStats(card, data);
-      const updated = data && formatDate(data.updated);
+      const updated = formatDate(data.updated);
       card.querySelector('.updated').textContent = updated ? `updated ${updated}` : '';
     }
-
-    let fetchedAt = null;
 
     async function loadStats(){
       try{
@@ -873,15 +865,24 @@
         if (!res.ok) throw new Error('no stats file yet');
         const stats = await res.json();
         fetchedAt = stats.fetchedAt ? new Date(stats.fetchedAt) : null;
-        cards.forEach(card => {
-          const data = stats.games && stats.games[card.dataset.placeId];
-          if (data) live.set(card, data);
+        // older files kept games in an object keyed by place id
+        const games = Array.isArray(stats.games) ? stats.games : Object.entries(stats.games || {}).map(([placeId, g]) => ({ placeId, ...g }));
+        cards = games.filter(g => g && g.placeId).map(g => {
+          const card = cardFor(g);
+          live.set(card, g);
+          return card;
+        });
+        // drop cards for games that left the group (or went private)
+        cardsByPlace.forEach((card, key) => {
+          if (!cards.includes(card)){ card.remove(); cardsByPlace.delete(key); live.delete(card); }
         });
         paintGroup(stats.group);
       }catch(err){
-        // keep whatever was shown; with nothing loaded yet, cards show "–"
+        // keep whatever was shown; with nothing loaded yet, the list says so
       }
       cards.forEach(paintCard);
+      applySort();
+      emptyEl.hidden = cards.length > 0;
       paintAge();
     }
 
@@ -913,8 +914,8 @@
     }
 
     function paintTotals(){
-      document.getElementById('total-games').textContent = cards.length;
       const known = cards.map(c => live.get(c)).filter(Boolean);
+      document.getElementById('total-games').textContent = known.length ? known.length : NO_DATA;
       const visitsEl = document.getElementById('total-visits');
       const playingEl = document.getElementById('total-playing');
       if (!known.length){ visitsEl.textContent = NO_DATA; playingEl.textContent = NO_DATA; return; }
@@ -924,7 +925,9 @@
 
     // ---------- group + member goal ----------
     function paintGroup(group){
-      if (!group || typeof group.memberCount !== 'number') return; // card just says "Founded 2025"
+      if (!group) return;
+      if (group.iconUrl) document.getElementById('group-icon').src = group.iconUrl;
+      if (typeof group.memberCount !== 'number') return; // card just says "Founded 2025"
       const memberCount = group.memberCount;
       document.getElementById('group-members').textContent = `${formatNum(memberCount)} Members · Founded 2025`;
       const goal = GOALS.find(g => g > memberCount) || memberCount;
@@ -937,19 +940,20 @@
     }
 
     // ---------- sorting ----------
+    const get = (card) => live.get(card) || {};
+    const byName = (a, b) => (get(a).name || '').localeCompare(get(b).name || '');
     const SORTS = {
-      default: (a, b) => a.dataset.order - b.dataset.order,
-      visits:  (a, b) => ((live.get(b) || {}).visits ?? -1) - ((live.get(a) || {}).visits ?? -1),
-      newest:  (a, b) => Date.parse((live.get(b) || {}).created || 0) - Date.parse((live.get(a) || {}).created || 0),
-      updated: (a, b) => Date.parse((live.get(b) || {}).updated || 0) - Date.parse((live.get(a) || {}).updated || 0),
-      name:    (a, b) => a.dataset.name.localeCompare(b.dataset.name),
-      genre:   (a, b) => a.dataset.genre.localeCompare(b.dataset.genre) || a.dataset.name.localeCompare(b.dataset.name)
+      visits:  (a, b) => (get(b).visits ?? -1) - (get(a).visits ?? -1),
+      newest:  (a, b) => Date.parse(get(b).created || 0) - Date.parse(get(a).created || 0),
+      updated: (a, b) => Date.parse(get(b).updated || 0) - Date.parse(get(a).updated || 0),
+      name:    byName,
+      genre:   (a, b) => (get(a).genre || '').localeCompare(get(b).genre || '')
     };
     const sortSelect = document.getElementById('sort-select');
 
     function applySort(){
-      // ties keep the featured order, so missing live data doesn't shuffle cards
-      const sorted = [...cards].sort((a, b) => SORTS[sortSelect.value](a, b) || SORTS.default(a, b));
+      // ties fall back to A-Z so the order never jumps around
+      const sorted = [...cards].sort((a, b) => SORTS[sortSelect.value](a, b) || byName(a, b));
       sorted.forEach(c => listEl.appendChild(c));
     }
     sortSelect.addEventListener('change', applySort);
@@ -959,27 +963,28 @@
     let dialogCard = null;
 
     function fillDetails(card){
-      const data = live.get(card) || null;
-      document.getElementById('dlg-thumb').src = card.dataset.thumb;
-      document.getElementById('dlg-thumb').alt = `${card.dataset.name} thumbnail`;
-      document.getElementById('dlg-name').textContent = card.dataset.name;
-      document.getElementById('dlg-genre').textContent = card.dataset.genre;
+      const data = get(card);
+      const name = data.name || 'Untitled game';
+      const thumb = document.getElementById('dlg-thumb');
+      if (data.thumbnail) thumb.src = data.thumbnail; else thumb.removeAttribute('src');
+      thumb.alt = `${name} thumbnail`;
+      document.getElementById('dlg-name').textContent = name;
+      document.getElementById('dlg-genre').textContent = data.genre || 'Roblox game';
       const stats = document.getElementById('dlg-stats');
       if (!stats.children.length) stats.innerHTML = statsHtml();
-      paintStats(stats, data);
+      paintStats(stats, live.get(card));
 
       const desc = document.getElementById('dlg-desc');
-      const text = (data && data.description && data.description.trim()) || card.dataset.description.trim();
+      const text = (data.description || '').trim();
       desc.textContent = text || 'No description yet.';
       desc.classList.toggle('empty', !text);
 
-      const created = data && formatDate(data.created);
-      const updated = data && formatDate(data.updated);
+      const created = formatDate(data.created);
+      const updated = formatDate(data.updated);
       document.getElementById('dlg-dates').textContent =
         [created && `created ${created}`, updated && `updated ${updated}`].filter(Boolean).join(' · ');
 
-      let notes = [];
-      try { notes = JSON.parse(card.dataset.notes || '[]'); } catch (e){}
+      const notes = GAME_NOTES[card.dataset.placeId] || [];
       const list = document.getElementById('dlg-notes-list');
       list.innerHTML = '';
       notes.forEach(n => {
@@ -1003,7 +1008,7 @@
     document.getElementById('dlg-close').addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); }); // backdrop
     dialog.addEventListener('close', () => {
-      if (dialogCard) dialogCard.querySelector('.card-open').focus();
+      if (dialogCard && dialogCard.isConnected) dialogCard.querySelector('.card-open').focus();
       dialogCard = null;
     });
     document.getElementById('dlg-play').addEventListener('click', playedTrophy);
@@ -1012,7 +1017,6 @@
     async function refreshAll(){
       await loadStats();
       paintTotals();
-      if (sortSelect.value !== 'default') applySort();
       if (dialog.open && dialogCard) fillDetails(dialogCard);
     }
 
