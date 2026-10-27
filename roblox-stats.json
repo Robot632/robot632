@@ -1,29 +1,63 @@
 {
-  "fetchedAt": "2026-10-27T05:04:34.448Z",
+  "fetchedAt": "2026-10-27T05:35:56.998Z",
   "group": {
     "id": 537398362,
-    "memberCount": 10
+    "memberCount": 10,
+    "name": "Robot632 Games",
+    "iconUrl": "https://tr.rbxcdn.com/180DAY-d35337eb25f365077589b7817efaead8/150/150/Image/Png/noFilter"
   },
-  "games": {
-    "126791245680041": {
+  "games": [
+    {
       "universeId": 8244290040,
+      "placeId": 126791245680041,
       "name": "Steal a User",
+      "genre": "Simulation · Tycoon",
+      "description": "🗣️ Welcome to Steal a User\n\n👍 Like the game and join the group\n🌀 Next User God at: 100 LIKES!\n\nHow to Play:\n👽 Buy a User\n🥷 Steal Users from other players\n💸 Generate money\n🐦‍🔥 Rebirth\n✋ Buy slaps and troll gear to troll other players!\n\n💻 Supports Desktop, Mobile and Tablet players",
+      "thumbnail": "https://tr.rbxcdn.com/180DAY-801ec45987668ffdcf3cb74e3c81dafe/768/432/Image/Png/noFilter",
       "visits": 279,
       "favoritedCount": 1,
       "playing": 0,
       "created": "2025-07-24T12:02:07.54Z",
-      "updated": "2026-10-26T16:30:54.957Z",
-      "description": "🗣️ Welcome to Steal a User\n\n👍 Like the game and join the group\n🌀 Next User God at: 100 LIKES!\n\nHow to Play:\n👽 Buy a User\n🥷 Steal Users from other players\n💸 Generate money\n🐦‍🔥 Rebirth\n✋ Buy slaps and troll gear to troll other players!\n\n💻 Supports Desktop, Mobile and Tablet players"
+      "updated": "2026-10-26T16:30:54.957Z"
     },
-    "73560747992308": {
+    {
       "universeId": 10636084736,
+      "placeId": 73560747992308,
       "name": "Sunete Linia 72",
+      "genre": "Entertainment · Music & Audio",
+      "description": null,
+      "thumbnail": "https://tr.rbxcdn.com/180DAY-29b601454e26d5da82640b587f562fba/768/432/Image/Png/noFilter",
       "visits": 19,
       "favoritedCount": 0,
       "playing": 0,
       "created": "2026-08-05T13:55:20.83Z",
-      "updated": "2026-10-26T18:18:37.748Z",
-      "description": null
+      "updated": "2026-10-26T18:18:37.748Z"
+    },
+    {
+      "universeId": 10772999476,
+      "placeId": 128109346591605,
+      "name": "Become Shopping Cart Certified!",
+      "genre": "",
+      "description": "Grab a shopping cart, run, hop on the bar and RIDE! Can you become Shopping Cart Certified?\n\n4 WORLDS, 160 STAGES: Supermarket, Frozen Foods, Candy Factory and Space Mart, each with 40 different obstacles: lasers, wrecking balls, conveyor belts, ice, trampolines, low gravity and more!\n\nUnlock 15+ cart skins, each with its own speed and turning stats\nHatch eggs and collect pets that boost your coins\nTrade pets and send gifts to friends\nSeason Pass with free and premium rewards\nGlobal leaderboards for coins and completions\nWorks great on phone, tablet, PC and console\n\nFinish every world and earn your CART CERTIFIED tag!",
+      "thumbnail": "https://tr.rbxcdn.com/180DAY-2a8481e578810467112c973a461c55ef/768/432/Image/Png/noFilter",
+      "visits": 7,
+      "favoritedCount": 0,
+      "playing": 0,
+      "created": "2026-10-25T19:15:21.22Z",
+      "updated": "2026-10-26T16:34:10.766Z"
+    },
+    {
+      "universeId": 10773151520,
+      "placeId": 71646254786531,
+      "name": "Sunete Linia 76",
+      "genre": "",
+      "description": null,
+      "thumbnail": "https://tr.rbxcdn.com/180DAY-dbd71d59f55f35d1a8fd8d9d51473cea/768/432/Image/Png/noFilter",
+      "visits": 2,
+      "favoritedCount": 0,
+      "playing": 0,
+      "created": "2026-10-26T17:38:19.32Z",
+      "updated": "2026-10-26T18:16:54.972Z"
     }
-  }
+  ]
 }
